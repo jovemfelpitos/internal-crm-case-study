@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" role="img" aria-label="Customer profile mockup with fictitious data">
+  <rect width="1200" height="720" fill="#f5f7fb"/>
+  <rect x="60" y="50" width="1080" height="140" rx="12" fill="#ffffff" stroke="#e2e8f0"/>
+  <text x="95" y="95" font-family="Arial" font-size="14" font-weight="700" fill="#64748b">CUSTOMER PROFILE</text>
+  <text x="95" y="132" font-family="Arial" font-size="30" font-weight="700" fill="#111827">Cliente Exemplo 001</text>
+  <text x="95" y="162" font-family="Arial" font-size="15" fill="#64748b">Masked ID: 000.***.***-00</text>
+  <rect x="850" y="90" width="120" height="34" rx="17" fill="#dcfce7" stroke="#86efac"/>
+  <text x="878" y="112" font-family="Arial" font-size="13" font-weight="700" fill="#166534">Completed</text>
+  <rect x="985" y="90" width="100" height="34" rx="17" fill="#ede9fe" stroke="#c4b5fd"/>
+  <text x="1014" y="112" font-family="Arial" font-size="13" font-weight="700" fill="#6d28d9">Review</text>
+  <rect x="60" y="220" width="1080" height="190" rx="12" fill="#ffffff" stroke="#e2e8f0"/>
+  <text x="95" y="260" font-family="Arial" font-size="18" font-weight="700" fill="#111827">Customer Details</text>
+  <g font-family="Arial" font-size="13" fill="#64748b">
+    <text x="95" y="305">TEAM</text>
+    <text x="350" y="305">CONSULTANT</text>
+    <text x="605" y="305">SALE DATE</text>
+    <text x="860" y="305">CONTACT</text>
+  </g>
+  <g font-family="Arial" font-size="16" fill="#111827">
+    <text x="95" y="333">Equipe Alpha</text>
+    <text x="350" y="333">Ana Exemplo</text>
+    <text x="605" y="333">01/01/2026</text>
+    <text x="860" y="333">(00) 00000-0000</text>
+  </g>
+  <rect x="60" y="440" width="1080" height="220" rx="12" fill="#ffffff" stroke="#e2e8f0"/>
+  <text x="95" y="480" font-family="Arial" font-size="18" font-weight="700" fill="#111827">Activity History</text>
+  <line x1="95" y1="510" x2="1100" y2="510" stroke="#e2e8f0"/>
+  <circle cx="120" cy="550" r="18" fill="#eff6ff"/>
+  <text x="115" y="556" font-family="Arial" font-size="14" font-weight="700" fill="#1d4ed8">1</text>
+  <text x="155" y="555" font-family="Arial" font-size="15" fill="#111827">Fictitious note: customer contacted and follow-up scheduled.</text>
+  <circle cx="120" cy="610" r="18" fill="#eff6ff"/>
+  <text x="115" y="616" font-family="Arial" font-size="14" font-weight="700" fill="#1d4ed8">2</text>
+  <text x="155" y="615" font-family="Arial" font-size="15" fill="#111827">Fictitious note: supervisor reviewed status update.</text>
+</svg>
+

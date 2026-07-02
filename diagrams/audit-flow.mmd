@@ -1,0 +1,8 @@
+flowchart LR
+    A["User or system action"] --> B["Permission validation"]
+    B --> C["Business change"]
+    C --> D["Detect changed fields"]
+    D --> E["Persist audit record"]
+    E --> F["Customer history"]
+    E --> G["Admin audit panel"]
+

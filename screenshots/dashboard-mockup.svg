@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" role="img" aria-label="Dashboard mockup with fictitious data">
+  <rect width="1200" height="720" fill="#f5f7fb"/>
+  <rect x="0" y="0" width="230" height="720" fill="#ffffff" stroke="#e2e8f0"/>
+  <text x="32" y="48" font-family="Arial" font-size="24" font-weight="700" fill="#111827">Internal CRM</text>
+  <rect x="24" y="90" width="180" height="42" rx="8" fill="#eff6ff"/>
+  <text x="44" y="117" font-family="Arial" font-size="15" fill="#1d4ed8">Customers</text>
+  <text x="44" y="166" font-family="Arial" font-size="15" fill="#64748b">Users</text>
+  <text x="44" y="208" font-family="Arial" font-size="15" fill="#64748b">Audit</text>
+  <text x="270" y="58" font-family="Arial" font-size="28" font-weight="700" fill="#111827">Customer Dashboard</text>
+  <text x="270" y="88" font-family="Arial" font-size="14" fill="#64748b">Fictitious operational data for case study documentation.</text>
+  <rect x="270" y="120" width="870" height="90" rx="10" fill="#ffffff" stroke="#e2e8f0"/>
+  <rect x="300" y="145" width="300" height="38" rx="6" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="318" y="169" font-family="Arial" font-size="14" fill="#64748b">Search by name or masked ID</text>
+  <rect x="620" y="145" width="150" height="38" rx="6" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="642" y="169" font-family="Arial" font-size="14" fill="#111827">Status</text>
+  <rect x="790" y="145" width="150" height="38" rx="6" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="812" y="169" font-family="Arial" font-size="14" fill="#111827">Position</text>
+  <rect x="960" y="145" width="120" height="38" rx="6" fill="#2563eb"/>
+  <text x="995" y="169" font-family="Arial" font-size="14" font-weight="700" fill="#ffffff">Search</text>
+  <rect x="270" y="240" width="870" height="390" rx="10" fill="#ffffff" stroke="#e2e8f0"/>
+  <text x="300" y="280" font-family="Arial" font-size="13" font-weight="700" fill="#64748b">CUSTOMER</text>
+  <text x="530" y="280" font-family="Arial" font-size="13" font-weight="700" fill="#64748b">TEAM</text>
+  <text x="690" y="280" font-family="Arial" font-size="13" font-weight="700" fill="#64748b">STATUS</text>
+  <text x="840" y="280" font-family="Arial" font-size="13" font-weight="700" fill="#64748b">POSITION</text>
+  <line x1="270" y1="300" x2="1140" y2="300" stroke="#e2e8f0"/>
+  <g font-family="Arial" font-size="15" fill="#111827">
+    <text x="300" y="338">Cliente Exemplo 001</text>
+    <text x="530" y="338">Equipe Alpha</text>
+    <text x="300" y="390">Cliente Exemplo 002</text>
+    <text x="530" y="390">Equipe Beta</text>
+    <text x="300" y="442">Cliente Exemplo 003</text>
+    <text x="530" y="442">Equipe Alpha</text>
+  </g>
+  <g font-family="Arial" font-size="12" font-weight="700">
+    <rect x="690" y="317" width="105" height="28" rx="14" fill="#dcfce7" stroke="#86efac"/>
+    <text x="710" y="336" fill="#166534">Completed</text>
+    <rect x="690" y="369" width="105" height="28" rx="14" fill="#dbeafe" stroke="#93c5fd"/>
+    <text x="710" y="388" fill="#1d4ed8">In progress</text>
+    <rect x="690" y="421" width="105" height="28" rx="14" fill="#fee2e2" stroke="#fca5a5"/>
+    <text x="716" y="440" fill="#b91c1c">Rejected</text>
+    <rect x="840" y="317" width="95" height="28" rx="14" fill="#f3e7d6" stroke="#d6ad7b"/>
+    <text x="862" y="336" fill="#7c4a1e">Loyal</text>
+    <rect x="840" y="369" width="95" height="28" rx="14" fill="#ede9fe" stroke="#c4b5fd"/>
+    <text x="860" y="388" fill="#6d28d9">Review</text>
+  </g>
+</svg>
+

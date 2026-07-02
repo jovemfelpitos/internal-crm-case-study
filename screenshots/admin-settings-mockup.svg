@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" role="img" aria-label="Admin settings mockup with fictitious data">
+  <rect width="1200" height="720" fill="#0f172a"/>
+  <rect x="60" y="50" width="1080" height="90" rx="12" fill="#111c33" stroke="#263650"/>
+  <text x="95" y="100" font-family="Arial" font-size="28" font-weight="700" fill="#e5e7eb">CRM Settings</text>
+  <text x="95" y="124" font-family="Arial" font-size="14" fill="#94a3b8">Fictitious admin configuration screen.</text>
+  <rect x="60" y="170" width="520" height="470" rx="12" fill="#111c33" stroke="#263650"/>
+  <text x="95" y="215" font-family="Arial" font-size="20" font-weight="700" fill="#e5e7eb">Status Options</text>
+  <g font-family="Arial" font-size="15" fill="#e5e7eb">
+    <text x="95" y="270">Completed</text>
+    <text x="95" y="330">In progress</text>
+    <text x="95" y="390">Rejected</text>
+  </g>
+  <rect x="370" y="248" width="110" height="30" rx="15" fill="rgba(34,197,94,.18)" stroke="#86efac"/>
+  <text x="395" y="268" font-family="Arial" font-size="13" font-weight="700" fill="#86efac">Preview</text>
+  <rect x="370" y="308" width="110" height="30" rx="15" fill="rgba(59,130,246,.2)" stroke="#93c5fd"/>
+  <text x="395" y="328" font-family="Arial" font-size="13" font-weight="700" fill="#93c5fd">Preview</text>
+  <rect x="370" y="368" width="110" height="30" rx="15" fill="rgba(239,68,68,.18)" stroke="#fca5a5"/>
+  <text x="395" y="388" font-family="Arial" font-size="13" font-weight="700" fill="#fca5a5">Preview</text>
+  <rect x="620" y="170" width="520" height="470" rx="12" fill="#111c33" stroke="#263650"/>
+  <text x="655" y="215" font-family="Arial" font-size="20" font-weight="700" fill="#e5e7eb">Role Profiles</text>
+  <rect x="655" y="250" width="420" height="70" rx="8" fill="#18243c" stroke="#263650"/>
+  <text x="680" y="282" font-family="Arial" font-size="16" font-weight="700" fill="#e5e7eb">Administrator</text>
+  <text x="680" y="304" font-family="Arial" font-size="13" fill="#94a3b8">Full access profile</text>
+  <rect x="655" y="340" width="420" height="70" rx="8" fill="#18243c" stroke="#263650"/>
+  <text x="680" y="372" font-family="Arial" font-size="16" font-weight="700" fill="#e5e7eb">Supervisor</text>
+  <text x="680" y="394" font-family="Arial" font-size="13" fill="#94a3b8">Team-level operations profile</text>
+  <rect x="655" y="430" width="420" height="70" rx="8" fill="#18243c" stroke="#263650"/>
+  <text x="680" y="462" font-family="Arial" font-size="16" font-weight="700" fill="#e5e7eb">Operator</text>
+  <text x="680" y="484" font-family="Arial" font-size="13" fill="#94a3b8">Assigned customer profile</text>
+</svg>
+

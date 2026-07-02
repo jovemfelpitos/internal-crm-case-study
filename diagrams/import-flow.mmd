@@ -1,0 +1,17 @@
+flowchart TD
+    A["Admin uploads Excel file"] --> B["Validate file type and size"]
+    B --> C["Read workbook with Pandas"]
+    C --> D["Select compatible sheet"]
+    D --> E["Normalize headers and values"]
+    E --> F["Normalize unique customer identifier"]
+    F --> G{"Duplicate in uploaded file?"}
+    G -->|Yes| H["Merge safe fields and count duplicate"]
+    G -->|No| I["Prepare customer payload"]
+    H --> I
+    I --> J{"Customer already exists?"}
+    J -->|Yes| K["Count duplicate and skip"]
+    J -->|No| L["Create customer record"]
+    L --> M["Write audit event"]
+    K --> N["Update import batch summary"]
+    M --> N
+

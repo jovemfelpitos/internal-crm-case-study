@@ -1,0 +1,22 @@
+sequenceDiagram
+    participant User
+    participant Browser
+    participant App as Flask App
+    participant Google
+    participant DB as Database
+
+    User->>Browser: Open login page
+    Browser->>App: GET /login
+    App-->>Browser: Render login page
+    alt Local login
+        Browser->>App: POST credentials
+        App->>DB: Validate active user
+        DB-->>App: User record
+        App-->>Browser: Create session and redirect
+    else Google OAuth
+        Browser->>Google: OAuth authorization
+        Google-->>App: Callback with user profile
+        App->>DB: Find user or create access request
+        App-->>Browser: Login or pending approval
+    end
+

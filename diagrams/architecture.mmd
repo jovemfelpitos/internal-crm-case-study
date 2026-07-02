@@ -1,0 +1,14 @@
+flowchart TB
+    U["User Browser"] --> R["HTTPS Reverse Proxy"]
+    R --> W["Gunicorn Workers"]
+    W --> F["Flask Application"]
+    F --> A["Authentication Layer"]
+    F --> P["Permission Layer"]
+    F --> I["Excel Import Layer"]
+    F --> B["Business Rules"]
+    B --> O["SQLAlchemy ORM"]
+    O --> D["SQLite Database"]
+    B --> L["Audit Log"]
+    F --> T["Jinja2 Templates"]
+    T --> U
+

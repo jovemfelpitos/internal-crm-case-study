@@ -1,0 +1,11 @@
+flowchart TD
+    A["Authenticated user"] --> B["Load role"]
+    B --> C["Load granular permissions"]
+    C --> D{"Can view all?"}
+    D -->|Yes| E["All active customers"]
+    D -->|No| F{"Supervisor role?"}
+    F -->|Yes| G["Team customers only"]
+    F -->|No| H["Assigned customers only"]
+    C --> I["Build editable field list"]
+    I --> J["Ignore unauthorized submitted fields"]
+
