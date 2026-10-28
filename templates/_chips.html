@@ -1,0 +1,8 @@
+{% macro option_chip(value, option_styles, empty_label='-') -%}
+  {% if value %}
+    {% set option_style = option_styles.get(value) %}
+    <span class="crm-chip" {% if option_style %}style="{{ option_style.style }}"{% endif %}>{{ value }}</span>
+  {% else %}
+    <span class="crm-chip chip-empty">{{ empty_label }}</span>
+  {% endif %}
+{%- endmacro %}

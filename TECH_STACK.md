@@ -54,5 +54,5 @@ The production deployment is designed for a Linux VPS, using systemd to manage a
 
 ## Git
 
-Git is used for version control and release discipline. This public repository intentionally contains documentation only.
+Git is used for version control and release discipline. This public repository includes a runnable demo of the main application, synthetic test fixtures and the original technical documentation. Operational data and deployment snapshots are excluded.
 

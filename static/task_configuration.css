@@ -1,0 +1,78 @@
+.task-config { max-width: 1560px; }
+.tc-heading, .tc-version-bar, .tc-list-heading, .tc-dialog-heading, .tc-dialog-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.tc-heading { margin-bottom: 24px; }
+.tc-version-bar { padding: 12px 0; border-top: 1px solid var(--crm-border); }
+.tc-chip { display: inline-block; padding: 3px 8px; border-radius: 5px; background: var(--crm-primary-soft); color: var(--crm-primary); font-size: .76rem; font-weight: 500; }
+.tc-chip-muted { background: var(--crm-surface-muted); color: var(--crm-muted); }
+.tc-notice:empty { display: none; }
+.tc-notice { margin: 8px 0; color: var(--crm-primary); }
+.tc-notice.tc-error { color: var(--bs-danger); }
+.tc-tabs { display: flex; gap: 18px; border-bottom: 1px solid var(--crm-border); margin-top: 10px; }
+.tc-tabs button { padding: 12px 0; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--crm-muted); font-weight: 500; }
+.tc-tabs button.active { color: var(--crm-primary); border-bottom-color: var(--crm-primary); }
+.tc-toolbar { display: grid; grid-template-columns: minmax(180px, 1.5fr) repeat(4, minmax(120px, 1fr)); gap: 12px; margin: 20px 0 14px; }
+.tc-toolbar > div, .tc-form-grid > div { min-width: 0; }
+.task-config label, .tc-dialog label { display: block; margin-bottom: 5px; font-size: .82rem; }
+.tc-list-heading { padding: 0 0 12px; }
+.tc-table-wrap { position: relative; overflow-x: auto; border-top: 1px solid var(--crm-border); }
+.tc-table { width: 100%; table-layout: fixed; margin: 0; }
+.tc-table th { color: var(--crm-muted); font-weight: 600; font-size: .76rem; text-transform: uppercase; }
+.tc-table th, .tc-table td { padding: 14px 12px; vertical-align: middle; overflow-wrap: anywhere; border-color: var(--crm-border); background: transparent; color: var(--crm-text); }
+.tc-table th:first-child { width: 29%; }
+.tc-table th:nth-child(2) { width: 25%; }
+.tc-table th:nth-child(3) { width: 23%; }
+.tc-table th:nth-child(4) { width: 13%; }
+.tc-table th:last-child { width: 120px; }
+.tc-table tbody tr:hover { background: var(--crm-surface-hover); }
+.tc-task-title { display: block; font-size: .9rem; font-weight: 600; }
+.tc-secondary { display: block; color: var(--crm-muted); font-size: .78rem; margin-top: 3px; }
+.tc-icon { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; flex-shrink: 0; border: 1px solid var(--crm-border); border-radius: 6px; background: var(--crm-surface); color: var(--crm-primary); font-size: 20px; }
+.tc-icon:hover { background: var(--crm-primary-soft); }
+.tc-icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.tc-edit-button { width: auto; min-width: 76px; gap: 6px; padding: 0 8px; font-size: .8rem; }
+.tc-edit-button:disabled { opacity: .65; cursor: wait; }
+.tc-dialog { width: min(680px, calc(100vw - 32px)); max-width: none; max-height: calc(100dvh - 32px); margin: auto; padding: 0; background: var(--crm-surface); color: var(--crm-text); border: 1px solid var(--crm-border); border-radius: 8px; box-shadow: var(--crm-shadow); overflow: auto; }
+.tc-dialog::backdrop { background: rgba(0, 0, 0, .58); }
+.tc-dialog-heading { padding: 18px 22px; border-bottom: 1px solid var(--crm-border); }
+.tc-dialog-body { padding: 20px 22px; }
+.tc-form-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.tc-full { grid-column: 1 / -1; }
+.tc-dialog .form-check { margin-left: 1.5rem; }
+.tc-dialog .form-check label { margin: 0; }
+.tc-dialog textarea { resize: vertical; }
+.tc-rule-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; border-top: 1px solid var(--crm-border); padding-top: 16px; margin: 20px 0 0; font-size: .8rem; }
+.tc-rule-summary dt { color: var(--crm-muted); font-weight: 400; }
+.tc-rule-summary dd { margin: 4px 0 0; overflow-wrap: anywhere; }
+.tc-dialog-footer { padding: 16px 22px; border-top: 1px solid var(--crm-border); }
+.tc-dialog-footer > span { flex: 1; min-width: 150px; }
+.tc-diff { padding: 18px 0; border-bottom: 1px solid var(--crm-border); }
+.tc-diff h3 { font-size: 1rem; margin: 0 0 4px; }
+.tc-diff-grid { display: grid; grid-template-columns: 140px minmax(0, 1fr) minmax(0, 1fr); gap: 8px 18px; margin-top: 12px; font-size: .85rem; overflow-wrap: anywhere; }
+.tc-publication-note { color: var(--crm-muted); font-size: .85rem; padding: 20px 0; }
+.tc-preview-form { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(180px, 1.3fr) minmax(160px, 1fr) auto; gap: 16px; align-items: end; margin: 24px 0 16px; }
+.tc-preview-form > div { min-width: 0; }
+.tc-preview-summary { padding: 16px 0; border-top: 1px solid var(--crm-border); border-bottom: 1px solid var(--crm-border); }
+.tc-preview-table { margin: 0; }
+.tc-preview-table th, .tc-preview-table td { padding: 12px; font-size: .85rem; background: transparent; color: var(--crm-text); border-color: var(--crm-border); overflow-wrap: anywhere; }
+.tc-preview-table th { font-weight: 600; }
+.tc-preview-table td:first-child { white-space: nowrap; }
+.tc-dialog [hidden], .task-config [hidden] { display: none !important; }
+@media (max-width: 1100px) {
+  .tc-preview-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tc-toolbar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .tc-toolbar > div:first-child { grid-column: span 2; }
+}
+@media (max-width: 700px) {
+  .tc-tabs { flex-wrap: wrap; }
+  .tc-preview-form { grid-template-columns: 1fr; }
+  .tc-preview-table { min-width: 600px; }
+  .tc-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tc-toolbar > div:first-child { grid-column: 1 / -1; }
+  .tc-table { min-width: 780px; }
+  .tc-dialog { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); }
+  .tc-dialog-heading, .tc-dialog-body, .tc-dialog-footer { padding: 16px; }
+  .tc-rule-summary { grid-template-columns: 1fr; }
+  .tc-dialog-footer > span { flex-basis: 100%; }
+  .tc-tabs { gap: 14px; font-size: .85rem; }
+  .tc-diff-grid { grid-template-columns: 85px minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+}

@@ -1,0 +1,2332 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mini CRM - {{ lead.nome_cliente }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}">
+    <style>
+      body { background: #f6f7f9; }
+      .shell {
+        width: 100%;
+        max-width: none;
+      }
+      .panel {
+        background: #fff;
+        border: 1px solid #e7e9ee;
+        border-radius: 8px;
+      }
+      .field-label {
+        color: #6c757d;
+        font-size: .78rem;
+        text-transform: uppercase;
+        letter-spacing: .02em;
+        margin-bottom: .25rem;
+      }
+      .field-value {
+        font-weight: 600;
+        color: #172033;
+      }
+      .section-title {
+        font-size: 1rem;
+        font-weight: 700;
+      }
+      .lead-deal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 1rem;
+      }
+      .lead-title-group {
+        min-width: 0;
+      }
+      .lead-title-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: .65rem;
+      }
+      .lead-back-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 999px;
+        border: 1px solid transparent;
+        color: var(--crm-primary);
+        text-decoration: none;
+        font-size: 1.2rem;
+        font-weight: 900;
+      }
+      .lead-back-link:hover,
+      .lead-back-link:focus {
+        border-color: var(--crm-border);
+        background: var(--crm-surface-hover);
+      }
+      .lead-title-meta,
+      .lead-title-chips,
+      .lead-header-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: .5rem;
+      }
+      .lead-title-meta {
+        margin-top: .25rem;
+        color: var(--crm-muted);
+        font-size: .9rem;
+      }
+      .lead-title-chips {
+        margin-top: .65rem;
+      }
+      .lead-header-actions {
+        justify-content: flex-end;
+      }
+      .lead-header-actions form {
+        margin: 0;
+      }
+      .lead-action-button {
+        min-height: 38px;
+        border-radius: 8px;
+        font-weight: 800;
+      }
+      .lead-action-note {
+        width: 100%;
+        color: var(--crm-muted);
+        font-size: .78rem;
+        text-align: right;
+      }
+      .lead-pipeline-section {
+        margin-bottom: 1rem;
+      }
+      .lead-pipeline-meta {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: end;
+        gap: .75rem;
+        margin-bottom: .45rem;
+      }
+      .lead-pipeline-title {
+        color: var(--crm-muted);
+        font-size: .74rem;
+        font-weight: 850;
+        letter-spacing: .03em;
+        text-transform: uppercase;
+      }
+      .lead-pipeline-current {
+        color: var(--crm-text);
+        font-size: .9rem;
+        font-weight: 800;
+      }
+      .lead-detail-grid {
+        display: grid;
+        grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
+        gap: 1.1rem;
+        align-items: start;
+      }
+      .lead-profile-column {
+        min-width: 0;
+      }
+      .lead-operation-column {
+        min-width: 0;
+      }
+      .lead-profile-card {
+        position: sticky;
+        top: 1rem;
+      }
+      .lead-profile-card .row > [class*="col-"] {
+        flex: 0 0 100%;
+        max-width: 100%;
+      }
+      .lead-profile-card .form-control,
+      .lead-profile-card .form-select {
+        min-height: 38px;
+        font-size: .92rem;
+      }
+      .lead-profile-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .5rem;
+      }
+      .lead-profile-actions .btn {
+        min-height: 36px;
+      }
+      .lead-profile-meta {
+        display: grid;
+        gap: .5rem;
+        margin-top: .85rem;
+        padding-top: .85rem;
+        border-top: 1px solid var(--crm-border);
+      }
+      .lead-profile-meta-item {
+        display: flex;
+        justify-content: space-between;
+        gap: .75rem;
+        color: var(--crm-muted);
+        font-size: .86rem;
+      }
+      .lead-profile-meta-item strong {
+        color: var(--crm-text);
+        font-weight: 750;
+        text-align: right;
+      }
+      .lead-ops-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: .75rem;
+        margin-bottom: .75rem;
+      }
+      .lead-ops-client {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .45rem .75rem;
+        margin-top: .25rem;
+        color: var(--crm-muted);
+        font-size: .9rem;
+      }
+      .lead-ops-client strong {
+        color: var(--crm-text);
+      }
+      .status-chip,
+      .position-chip {
+        display: inline-flex;
+        align-items: center;
+        min-height: 30px;
+        border-radius: 999px;
+        padding: 0 .75rem;
+        font-size: .85rem;
+        font-weight: 700;
+        border: 1px solid transparent;
+      }
+      .status-concluido { background: #dcfce7; color: #166534; border-color: #86efac; }
+      .status-em-andamento { background: #dbeafe; color: #1d4ed8; border-color: #93c5fd; }
+      .status-recusado { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
+      .position-fidelizado { background: #f3e7d6; color: #7c4a1e; border-color: #d6ad7b; }
+      .chip-empty { background: #f1f3f5; color: #6c757d; border-color: #dee2e6; }
+      .workflow-summary {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: .75rem;
+      }
+      .unlock-banner {
+        border: 1px solid var(--crm-border);
+        border-radius: 8px;
+        background: var(--crm-surface);
+      }
+      .compact-unlock-banner {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        gap: .75rem;
+        align-items: center;
+        padding: .8rem .95rem !important;
+      }
+      .unlock-alert-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 999px;
+        background: var(--crm-primary);
+        box-shadow: 0 0 0 5px var(--crm-primary-soft);
+      }
+      .unlock-banner-warning .unlock-alert-dot {
+        background: #f59e0b;
+        box-shadow: 0 0 0 5px rgba(245, 158, 11, .14);
+      }
+      .unlock-banner-success .unlock-alert-dot {
+        background: #16a34a;
+        box-shadow: 0 0 0 5px rgba(22, 163, 74, .14);
+      }
+      .unlock-banner-danger .unlock-alert-dot,
+      .unlock-banner-critical .unlock-alert-dot {
+        background: #dc2626;
+        box-shadow: 0 0 0 5px rgba(220, 38, 38, .14);
+      }
+      .unlock-compact-line {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: .45rem;
+      }
+      .unlock-banner-body {
+        min-width: 0;
+      }
+      .unlock-date-pill {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: flex-end;
+        justify-content: center;
+        min-width: 104px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+      }
+      .unlock-date-pill-label {
+        color: var(--crm-muted);
+        font-size: .66rem;
+        font-weight: 800;
+        letter-spacing: .02em;
+        text-transform: uppercase;
+      }
+      .unlock-date-pill-value {
+        color: var(--crm-text);
+        font-size: .9rem;
+        font-weight: 850;
+        white-space: nowrap;
+      }
+      .unlock-banner-active {
+        border-color: rgba(37, 99, 235, .35);
+        background:
+          linear-gradient(90deg, rgba(37, 99, 235, .09), transparent 72%),
+          var(--crm-surface);
+      }
+      .unlock-banner-warning {
+        border-color: rgba(245, 158, 11, .42);
+        background:
+          linear-gradient(90deg, rgba(245, 158, 11, .10), transparent 72%),
+          var(--crm-surface);
+      }
+      .unlock-banner-success {
+        border-color: rgba(22, 163, 74, .40);
+        background:
+          linear-gradient(90deg, rgba(22, 163, 74, .10), transparent 72%),
+          var(--crm-surface);
+      }
+      .unlock-banner-danger,
+      .unlock-banner-critical {
+        border-color: rgba(220, 38, 38, .48);
+        background:
+          linear-gradient(90deg, rgba(220, 38, 38, .11), transparent 72%),
+          var(--crm-surface);
+      }
+      .unlock-banner-title {
+        color: var(--crm-text);
+        font-weight: 850;
+      }
+      .workflow-summary-item,
+      .activity-item,
+      .stage-history-item {
+        border: 1px solid var(--crm-border);
+        border-radius: 8px;
+        background: var(--crm-surface-muted);
+      }
+      .workflow-summary-item {
+        padding: 0;
+        border: 0;
+        background: transparent;
+      }
+      .workflow-stage-track {
+        display: flex;
+        gap: 0;
+        width: 100%;
+        overflow-x: auto;
+        padding: .15rem .15rem .35rem 0;
+        margin-bottom: .85rem;
+        scrollbar-width: thin;
+      }
+      .workflow-stage-chip {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: .4rem;
+        width: 100%;
+        height: 100%;
+        min-height: 34px;
+        padding: .4rem 1.1rem .4rem 1.35rem;
+        border: 0;
+        border-radius: 0;
+        background: var(--crm-surface-hover);
+        color: var(--crm-muted);
+        font-size: .76rem;
+        font-weight: 850;
+        line-height: 1.15;
+        text-align: center;
+        text-decoration: none;
+        clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 50%, calc(100% - 13px) 100%, 0 100%, 13px 50%);
+        transition: background-color .15s ease, color .15s ease, transform .15s ease, box-shadow .15s ease;
+      }
+      .workflow-stage-form {
+        display: flex;
+        flex: 1 1 0;
+        min-width: 150px;
+        margin: 0;
+      }
+      .workflow-stage-track > .workflow-stage-chip {
+        flex: 1 1 0;
+        min-width: 150px;
+      }
+      .workflow-stage-form:first-child .workflow-stage-chip,
+      .workflow-stage-track > .workflow-stage-chip:first-child {
+        clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 50%, calc(100% - 13px) 100%, 0 100%);
+        border-radius: 7px 0 0 7px;
+        padding-left: 1rem;
+      }
+      .workflow-stage-form:last-child .workflow-stage-chip,
+      .workflow-stage-track > .workflow-stage-chip:last-child {
+        border-radius: 0 7px 7px 0;
+      }
+      button.workflow-stage-chip {
+        appearance: none;
+        font: inherit;
+        cursor: pointer;
+      }
+      .workflow-stage-index {
+        display: grid;
+        place-items: center;
+        width: 18px;
+        height: 18px;
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--crm-text) 8%, transparent);
+        color: var(--crm-muted);
+        font-size: .68rem;
+        flex: 0 0 auto;
+      }
+      .workflow-stage-name {
+        min-width: 0;
+        overflow-wrap: normal;
+        word-break: normal;
+      }
+      .workflow-stage-done {
+        background: color-mix(in srgb, var(--crm-primary) 14%, var(--crm-surface-hover));
+        color: var(--crm-text);
+      }
+      .workflow-stage-current {
+        background: var(--crm-primary);
+        color: var(--crm-primary-contrast);
+        box-shadow: 0 10px 22px rgba(37, 99, 235, .18);
+      }
+      .workflow-stage-current .workflow-stage-index {
+        background: rgba(255, 255, 255, .95);
+        color: #1d4ed8;
+      }
+      .workflow-stage-alert {
+        box-shadow: inset 0 -3px 0 rgba(220, 38, 38, .82);
+      }
+      .workflow-stage-next {
+        border-style: solid;
+      }
+      .workflow-stage-locked {
+        opacity: .68;
+      }
+      button.workflow-stage-chip:hover,
+      button.workflow-stage-chip:focus {
+        background: color-mix(in srgb, var(--crm-primary) 22%, var(--crm-surface-hover));
+        color: var(--crm-text);
+        transform: translateY(-1px);
+      }
+      button.workflow-stage-current:hover,
+      button.workflow-stage-current:focus {
+        background: var(--crm-primary-hover);
+        color: var(--crm-primary-contrast);
+      }
+      html[data-theme="dark"] .workflow-stage-done {
+        color: var(--crm-text);
+        background: var(--crm-surface-muted);
+      }
+      .workflow-flowline {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+        gap: .9rem;
+        align-items: center;
+      }
+      .workflow-flow-node {
+        min-width: 0;
+      }
+      .workflow-flow-arrow {
+        width: 34px;
+        height: 34px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--crm-surface);
+        border: 1px solid var(--crm-border);
+        color: var(--crm-muted);
+        font-weight: 850;
+      }
+      .workflow-meta-line {
+        color: var(--crm-muted);
+        font-size: .84rem;
+        margin-top: .15rem;
+      }
+      .workflow-requirements {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .4rem;
+        margin-top: .65rem;
+        padding-top: .65rem;
+        border-top: 1px solid var(--crm-border);
+      }
+      .workflow-requirement-pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        width: fit-content;
+        padding: 0 .55rem;
+        border-radius: 999px;
+        background: var(--crm-surface);
+        color: var(--crm-muted);
+        border: 1px solid var(--crm-border);
+        font-size: .75rem;
+        font-weight: 750;
+      }
+      .workflow-missing {
+        margin-top: .65rem;
+        padding: .65rem .75rem;
+        border: 1px solid rgba(245, 158, 11, .35);
+        border-radius: 8px;
+        background: rgba(245, 158, 11, .10);
+        color: #92400e;
+        font-size: .82rem;
+        font-weight: 700;
+      }
+      html[data-theme="dark"] .workflow-missing {
+        color: #fbbf24;
+        background: rgba(245, 158, 11, .12);
+      }
+      .workflow-progress-form {
+        margin-top: .75rem;
+        padding-top: .75rem;
+        border-top: 1px solid var(--crm-border);
+      }
+      .workflow-task-panel {
+        margin-top: .75rem;
+        padding: 0;
+        border: 0;
+        background: transparent;
+      }
+      .workflow-task-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: .75rem;
+        margin-bottom: .65rem;
+      }
+      .workflow-task-count {
+        color: var(--crm-muted);
+        font-size: .8rem;
+        font-weight: 750;
+      }
+      .workflow-task-item {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        gap: .8rem;
+        align-items: center;
+        min-height: 64px;
+        padding: .85rem .95rem;
+        border: 1px solid var(--crm-border);
+        border-radius: 8px;
+        background: var(--crm-surface);
+        transition: border-color .15s ease, background-color .15s ease, transform .15s ease;
+      }
+      .workflow-task-item:hover {
+        border-color: color-mix(in srgb, var(--crm-primary) 40%, var(--crm-border));
+        background: var(--crm-surface-hover);
+      }
+      .workflow-task-item.is-done {
+        border-color: rgba(22, 163, 74, .35);
+        background: rgba(22, 163, 74, .08);
+      }
+      .workflow-task-item.is-overdue {
+        border-color: rgba(220, 38, 38, .34);
+        background: rgba(220, 38, 38, .08);
+      }
+      .workflow-task-item.is-future {
+        opacity: .72;
+      }
+      .workflow-task-main {
+        min-width: 0;
+      }
+      .workflow-task-title {
+        color: var(--crm-text);
+        font-weight: 850;
+      }
+      .workflow-task-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .35rem .6rem;
+        margin-top: .18rem;
+        color: var(--crm-muted);
+        font-size: .78rem;
+        font-weight: 700;
+      }
+      .workflow-task-description {
+        display: block;
+        margin-top: .15rem;
+        color: var(--crm-muted);
+        font-size: .84rem;
+      }
+      .workflow-task-state {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 24px;
+        padding: 0 .6rem;
+        border-radius: 999px;
+        background: var(--crm-surface-muted);
+        color: var(--crm-muted);
+        font-size: .72rem;
+        font-weight: 850;
+        white-space: nowrap;
+      }
+      .workflow-task-item.is-done .workflow-task-state {
+        background: rgba(22, 163, 74, .12);
+        color: #15803d;
+      }
+      .workflow-task-item.is-overdue .workflow-task-state {
+        background: rgba(220, 38, 38, .12);
+        color: #b91c1c;
+      }
+      .workflow-task-action {
+        width: 38px;
+        height: 38px;
+        border: 0;
+        border-radius: 10px;
+        background: rgba(6, 182, 212, .18);
+        color: var(--crm-primary);
+        font-size: 1rem;
+        font-weight: 950;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform .15s ease, background-color .15s ease;
+      }
+      .workflow-task-action:hover {
+        transform: translateY(-1px);
+        background: color-mix(in srgb, rgba(6, 182, 212, .18) 78%, var(--crm-primary));
+      }
+      .workflow-task-action:disabled {
+        cursor: not-allowed;
+        transform: none;
+        background: rgba(22, 163, 74, .12);
+        color: #15803d;
+      }
+      .support-panel {
+        margin-top: .75rem;
+        padding: .75rem;
+        border: 1px solid var(--crm-border);
+        border-radius: 8px;
+        background: var(--crm-surface);
+      }
+      .support-panel-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: .75rem;
+      }
+      .support-state {
+        color: var(--crm-muted);
+        font-size: .84rem;
+      }
+      .support-state-pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        padding: 0 .55rem;
+        border-radius: 999px;
+        border: 1px solid var(--crm-border);
+        background: var(--crm-surface-muted);
+        color: var(--crm-muted);
+        font-size: .72rem;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+      .support-state-critical {
+        border-color: rgba(220, 38, 38, .30);
+        background: rgba(220, 38, 38, .10);
+        color: #b91c1c;
+      }
+      .support-state-warning {
+        border-color: rgba(245, 158, 11, .34);
+        background: rgba(245, 158, 11, .12);
+        color: #92400e;
+      }
+      .support-state-info {
+        border-color: rgba(37, 99, 235, .28);
+        background: var(--crm-primary-soft);
+        color: var(--crm-primary);
+      }
+      .support-state-success {
+        border-color: rgba(22, 163, 74, .28);
+        background: rgba(22, 163, 74, .10);
+        color: #15803d;
+      }
+      html[data-theme="dark"] .support-state-critical { color: #fca5a5; }
+      html[data-theme="dark"] .support-state-warning { color: #fbbf24; }
+      html[data-theme="dark"] .support-state-success { color: #86efac; }
+      .reversal-state-pill {
+        border-color: rgba(124, 58, 237, .30);
+        background: rgba(124, 58, 237, .10);
+        color: #6d28d9;
+      }
+      .reversal-state-overdue,
+      .reversal-state-failed {
+        border-color: rgba(220, 38, 38, .30);
+        background: rgba(220, 38, 38, .10);
+        color: #b91c1c;
+      }
+      .reversal-state-completed {
+        border-color: rgba(22, 163, 74, .28);
+        background: rgba(22, 163, 74, .10);
+        color: #15803d;
+      }
+      .reversal-panel {
+        display: grid;
+        gap: .75rem;
+        margin-bottom: .85rem;
+        padding: .9rem;
+        border: 1px solid rgba(124, 58, 237, .24);
+        border-radius: 8px;
+        background: linear-gradient(135deg, rgba(124, 58, 237, .08), rgba(37, 99, 235, .06));
+      }
+      .reversal-panel-head {
+        display: flex;
+        justify-content: space-between;
+        gap: .75rem;
+        align-items: flex-start;
+      }
+      .reversal-meta-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: .6rem;
+      }
+      .reversal-meta-item {
+        min-width: 0;
+      }
+      .reversal-meta-label {
+        color: var(--crm-muted);
+        font-size: .68rem;
+        font-weight: 800;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+      }
+      .reversal-meta-value {
+        color: var(--crm-text);
+        font-size: .86rem;
+        font-weight: 800;
+      }
+      html[data-theme="dark"] .reversal-state-pill { color: #c4b5fd; }
+      html[data-theme="dark"] .reversal-state-completed { color: #86efac; }
+      html[data-theme="dark"] .reversal-state-overdue,
+      html[data-theme="dark"] .reversal-state-failed { color: #fca5a5; }
+      .support-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .45rem;
+        margin-top: .65rem;
+      }
+      .support-status-line {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: .45rem;
+        margin-top: .65rem;
+      }
+      .support-select-form {
+        width: min(100%, 320px);
+      }
+      .support-select-form .form-select {
+        width: 100%;
+        min-height: 36px;
+      }
+      .support-change-button {
+        appearance: none;
+        border: 0;
+        background: transparent;
+        color: var(--crm-primary);
+        display: inline;
+        padding: 0;
+        font: inherit;
+        font-style: italic;
+        font-weight: 800;
+        cursor: pointer;
+      }
+      .support-change-button:hover,
+      .support-change-button:focus {
+        text-decoration: underline;
+      }
+      .support-modal {
+        width: min(420px, calc(100vw - 2rem));
+        max-width: calc(100vw - 2rem);
+        border: 0;
+        padding: 0;
+        background: transparent;
+        color: var(--crm-text);
+      }
+      .support-modal::backdrop {
+        background: rgba(15, 23, 42, .46);
+        backdrop-filter: blur(2px);
+      }
+      .support-modal-card,
+      .task-complete-modal .support-modal-content {
+        position: relative;
+        padding: 1rem;
+        border: 1px solid var(--crm-border);
+        border-radius: 8px;
+        background: var(--crm-surface);
+        box-shadow: 0 20px 55px rgba(15, 23, 42, .22);
+      }
+      .task-complete-modal .support-modal-header {
+        margin-bottom: 1rem;
+      }
+      .task-complete-modal .support-modal-form > .field-label {
+        display: block;
+        margin: .75rem 0 .3rem;
+      }
+      .status-modal-card {
+        padding: 1.25rem;
+      }
+      .support-modal-close {
+        position: absolute;
+        top: .65rem;
+        right: .65rem;
+        width: 30px;
+        height: 30px;
+        border: 1px solid var(--crm-border);
+        border-radius: 999px;
+        background: var(--crm-surface-muted);
+        color: var(--crm-muted);
+        font-weight: 900;
+        line-height: 1;
+      }
+      .support-modal-title {
+        margin: 0;
+        padding-right: 2.25rem;
+        color: var(--crm-text);
+        font-size: 1rem;
+        font-weight: 850;
+      }
+      .support-modal-actions {
+        display: grid;
+        gap: .5rem;
+        margin-top: .85rem;
+      }
+      .support-modal-actions form {
+        margin: 0;
+      }
+      .support-inline-form {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .45rem;
+        align-items: end;
+      }
+      .support-inline-form .form-control {
+        min-width: min(100%, 250px);
+      }
+      .workflow-checklist {
+        display: grid;
+        gap: .45rem;
+      }
+      .workflow-checklist .form-check {
+        min-height: 28px;
+      }
+      .activity-composer {
+        display: grid;
+        grid-template-columns: minmax(260px, 1fr) auto;
+        gap: .75rem;
+        align-items: end;
+      }
+      .activity-composer.is-disabled {
+        opacity: .72;
+      }
+      .activity-disabled-note {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        padding: 0 .55rem;
+        border: 1px solid var(--crm-border);
+        border-radius: 999px;
+        background: var(--crm-surface-muted);
+        color: var(--crm-muted);
+        font-size: .72rem;
+        font-weight: 850;
+      }
+      .activity-list {
+        display: grid;
+        gap: 0;
+      }
+      .history-tabs {
+        display: grid;
+        gap: 1rem;
+      }
+      .history-tab-input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+      }
+      .history-tab-nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .35rem;
+        width: fit-content;
+        max-width: 100%;
+        padding: .25rem;
+        border: 1px solid var(--crm-border);
+        border-radius: 8px;
+        background: var(--crm-surface-muted);
+      }
+      .history-tab-button {
+        display: inline-flex;
+        align-items: center;
+        gap: .45rem;
+        min-height: 36px;
+        padding: 0 .85rem;
+        border-radius: 6px;
+        color: var(--crm-muted);
+        font-size: .86rem;
+        font-weight: 800;
+        cursor: pointer;
+        user-select: none;
+      }
+      .history-tab-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 24px;
+        height: 22px;
+        padding: 0 .45rem;
+        border-radius: 999px;
+        border: 1px solid var(--crm-border);
+        background: var(--crm-surface);
+        color: var(--crm-muted);
+        font-size: .75rem;
+      }
+      .history-tab-pane {
+        display: none;
+      }
+      #history-tab-operational:checked ~ .history-tab-nav label[for="history-tab-operational"],
+      #history-tab-reversals:checked ~ .history-tab-nav label[for="history-tab-reversals"] {
+        background: var(--crm-primary);
+        color: #fff;
+        box-shadow: 0 8px 18px rgba(37, 99, 235, .16);
+      }
+      #history-tab-operational:checked ~ .history-tab-nav label[for="history-tab-operational"] .history-tab-count,
+      #history-tab-reversals:checked ~ .history-tab-nav label[for="history-tab-reversals"] .history-tab-count {
+        border-color: rgba(255, 255, 255, .35);
+        background: rgba(255, 255, 255, .18);
+        color: #fff;
+      }
+      #history-tab-operational:checked ~ .history-tab-content .history-tab-pane-operational,
+      #history-tab-reversals:checked ~ .history-tab-content .history-tab-pane-reversals {
+        display: block;
+      }
+      .activity-item {
+        position: relative;
+        padding: 0 0 1.25rem 1.15rem;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+      }
+      .activity-item::before {
+        content: "";
+        position: absolute;
+        left: .22rem;
+        top: .3rem;
+        bottom: 0;
+        width: 1px;
+        background: var(--crm-border);
+      }
+      .activity-item::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: .28rem;
+        width: .48rem;
+        height: .48rem;
+        border-radius: 999px;
+        background: var(--crm-primary);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--crm-primary) 18%, transparent);
+      }
+      .activity-list .activity-item:last-child {
+        padding-bottom: 0;
+      }
+      .activity-list .activity-item:last-child::before {
+        display: none;
+      }
+      .history-event-title-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: .45rem;
+      }
+      .history-event-title {
+        color: var(--crm-text);
+        font-weight: 900;
+      }
+      .history-event-meta,
+      .history-event-detail {
+        color: var(--crm-muted);
+        font-size: .84rem;
+      }
+      .history-event-detail {
+        margin-top: .4rem;
+        color: var(--crm-text);
+        font-weight: 750;
+      }
+      .history-context-divider {
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        max-width: 100%;
+        margin: .15rem 0 .1rem;
+        padding: .28rem .6rem;
+        border: 1px solid color-mix(in srgb, var(--crm-primary) 28%, var(--crm-border));
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--crm-primary) 8%, transparent);
+        color: var(--crm-text);
+        font-size: .76rem;
+        font-weight: 600;
+        letter-spacing: .01em;
+      }
+      .activity-body {
+        margin-top: .35rem;
+        white-space: pre-wrap;
+        color: var(--crm-text);
+      }
+      .activity-source {
+        display: inline-flex;
+        align-items: center;
+        min-height: 18px;
+        padding: 0 .4rem;
+        border-radius: 999px;
+        border: 1px solid color-mix(in srgb, var(--crm-primary) 24%, var(--crm-border));
+        background: color-mix(in srgb, var(--crm-primary) 7%, transparent);
+        color: color-mix(in srgb, var(--crm-primary) 82%, var(--crm-text));
+        font-size: .66rem;
+        font-weight: 800;
+        line-height: 1;
+      }
+      .stage-history-list {
+        display: grid;
+        gap: .65rem;
+      }
+      .stage-history-item {
+        padding: .75rem .85rem;
+      }
+      @media (max-width: 992px) {
+        .lead-deal-header {
+          display: grid;
+        }
+        .lead-header-actions {
+          justify-content: flex-start;
+        }
+        .lead-action-note {
+          text-align: left;
+        }
+        .lead-detail-grid {
+          grid-template-columns: 1fr;
+        }
+        .lead-operation-column {
+          order: -1;
+        }
+        .lead-profile-card {
+          position: static;
+        }
+        .compact-unlock-banner {
+          grid-template-columns: auto minmax(0, 1fr);
+        }
+        .unlock-date-pill {
+          grid-column: 2;
+          align-items: flex-start;
+          width: fit-content;
+        }
+        .workflow-flowline {
+          grid-template-columns: 1fr;
+          gap: .45rem;
+        }
+        .workflow-flow-arrow {
+          width: 28px;
+          height: 28px;
+          justify-self: start;
+          transform: rotate(90deg);
+        }
+        .activity-composer {
+          grid-template-columns: 1fr;
+        }
+        .history-tab-nav {
+          width: 100%;
+        }
+        .history-tab-button {
+          flex: 1 1 150px;
+          justify-content: center;
+        }
+      }
+    </style>
+    {% include "_theme_head.html" %}
+  </head>
+  <body>
+    {% from "_chips.html" import option_chip %}
+    {% macro status_chip(status) -%}
+      {% set class_name = {
+        'Concluido': 'status-concluido',
+        'Em andamento': 'status-em-andamento',
+        'Recusado': 'status-recusado'
+      }.get(status, 'chip-empty') %}
+      <span class="status-chip {{ class_name }}">{{ status or 'Sem status' }}</span>
+    {%- endmacro %}
+
+    {% macro audit_hint(audit) -%}
+      {% if audit and can_view_lead_audit %}
+        <div class="text-muted small mt-1">
+          Ultima alteracao: {{ audit.user.name if audit.user else 'Sistema' }}
+          em {{ audit.created_at.strftime('%d/%m/%Y %H:%M') }}
+        </div>
+      {% endif %}
+    {%- endmacro %}
+
+    {% macro support_status_chip(item) -%}
+      {% if item and lead_workflow_requires_support(item) %}
+        {% set support_alert = workflow_support_alert(item) %}
+        {% if item.support_completed_at %}
+          <span class="support-state-pill support-state-success">Apoio concluido</span>
+        {% elif item.support_returned_at %}
+          <span class="support-state-pill support-state-warning">Apoio devolvido</span>
+        {% elif item.assigned_user %}
+          <span class="support-state-pill support-state-info">Apoio em andamento</span>
+        {% elif support_alert %}
+          <span class="support-state-pill support-state-{{ support_alert.severity }}">{{ support_alert.label }}</span>
+        {% else %}
+          <span class="support-state-pill support-state-warning">Apoio pendente</span>
+        {% endif %}
+      {% endif %}
+    {%- endmacro %}
+
+    {% macro reversal_status_chip(task) -%}
+      {% if task %}
+        {% set class_name = 'reversal-state-' ~ task.status|replace('_', '-') %}
+        <span class="support-state-pill reversal-state-pill {{ class_name }}">
+          {{ reversal_status_label(task.status) }}
+        </span>
+      {% else %}
+        <span class="support-state-pill reversal-state-pill reversal-state-empty">Sem reversão</span>
+      {% endif %}
+    {%- endmacro %}
+
+    {% include "_app_sidebar.html" %}
+    <nav class="navbar navbar-expand-lg bg-white border-bottom d-none">
+      <div class="container-fluid shell">
+        <a class="navbar-brand fw-semibold" href="{{ url_for('dashboard') }}">Mini CRM</a>
+        <div class="d-flex align-items-center gap-3">
+          <a class="btn btn-outline-secondary btn-sm" href="{{ back_url }}">Voltar</a>
+          {% include "_theme_toggle.html" %}
+          <span class="small text-muted">{{ current_user.name }} - {{ current_user.role }}</span>
+          <form method="post" action="{{ url_for('logout') }}">
+            {% include "_csrf_token.html" %}
+            <button class="btn btn-outline-secondary btn-sm">Sair</button>
+          </form>
+        </div>
+      </div>
+    </nav>
+
+    <main class="container-fluid shell py-4 app-main">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <header class="lead-deal-header">
+        <div class="lead-title-group">
+          <div class="lead-title-row">
+            <a class="lead-back-link" href="{{ back_url }}" aria-label="Voltar">‹</a>
+            <div>
+              <h1 class="h3 mb-0">{{ lead.nome_cliente }}</h1>
+              <div class="lead-title-meta">
+                <span>CPF {{ lead.cpf }}</span>
+                {% if lead.equipe %}<span>{{ lead.equipe }}</span>{% endif %}
+                {% if lead.consultor %}<span>{{ lead.consultor }}</span>{% endif %}
+              </div>
+              <div class="lead-title-chips">
+                {{ option_chip(lead.status, status_option_styles, 'Sem status') }}
+                {{ support_status_chip(current_lead_workflow) }}
+                {{ reversal_status_chip(active_reversal_task or latest_reversal_task) }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="lead-header-actions" aria-label="Acoes do contrato">
+          {% if not reversal_only_view %}
+          {% if can_request_lead_reversal %}
+            {% if active_reversal_task %}
+              <button
+                class="btn btn-outline-primary lead-action-button"
+                type="button"
+                {% if can_cancel_active_reversal %}data-support-modal-open="reversal-cancel-modal-{{ active_reversal_task.id }}"{% else %}disabled{% endif %}
+              >
+                Voltar reversao
+              </button>
+            {% else %}
+              <button
+                class="btn btn-outline-primary lead-action-button"
+                type="button"
+                data-support-modal-open="reversal-request-modal-{{ lead.id }}"
+              >
+                Enviar para reversao
+              </button>
+            {% endif %}
+          {% endif %}
+
+          {% if current_user.can_reject_contract %}
+            <button
+              class="btn btn-outline-danger lead-action-button"
+              type="button"
+              data-support-modal-open="status-loss-modal-{{ lead.id }}"
+            >
+              Marcar recusado
+            </button>
+          {% else %}
+            <button class="btn btn-outline-danger lead-action-button" type="button" disabled>Marcar recusado</button>
+          {% endif %}
+
+          {% if can_user_conclude_contract and lead.status != 'Concluido' %}
+            <form method="post" action="{{ url_for('update_lead_status', lead_id=lead.id) }}">
+              {% include "_csrf_token.html" %}
+              <input type="hidden" name="next" value="{{ lead_self_url }}">
+              <button class="btn btn-success lead-action-button" type="submit" name="status_action" value="concluido">
+                Marcar concluido
+              </button>
+            </form>
+          {% else %}
+            <button class="btn btn-success lead-action-button" type="button" disabled>Marcar concluido</button>
+          {% endif %}
+
+          {% if current_user.can_undo_contract_status and can_undo_contract_status %}
+            <form method="post" action="{{ url_for('update_lead_status', lead_id=lead.id) }}">
+              {% include "_csrf_token.html" %}
+              <input type="hidden" name="next" value="{{ lead_self_url }}">
+              <button class="btn btn-outline-secondary lead-action-button" type="submit" name="status_action" value="undo">
+                Desfazer status
+              </button>
+            </form>
+          {% endif %}
+
+          {% if not can_user_conclude_contract and current_user.can_conclude_contract %}
+            <div class="lead-action-note">
+              {% if can_conclude_contract %}
+                Seu cargo ainda nao pode concluir este contrato.
+              {% else %}
+                {{ post_sale_completion_state.message }}
+              {% endif %}
+            </div>
+          {% endif %}
+          {% endif %}
+        </div>
+      </header>
+
+      {% if not reversal_only_view and can_request_lead_reversal and not active_reversal_task %}
+        <dialog class="support-modal" id="reversal-request-modal-{{ lead.id }}">
+          <form method="post" action="{{ url_for('request_lead_reversal', lead_id=lead.id) }}" class="support-modal-card status-modal-card">
+            {% include "_csrf_token.html" %}
+            <input type="hidden" name="next" value="{{ lead_self_url }}">
+            <button class="support-modal-close" type="button" data-support-modal-close aria-label="Fechar">x</button>
+            <p class="field-label mb-1">Reversao</p>
+            <h2 class="support-modal-title">Enviar cliente para reversao?</h2>
+            {% if reversal_candidate_count > 0 %}
+              <div class="text-muted small mt-2 mb-3">
+                O cliente continua na carteira de {{ lead.consultor or 'vendedor' }} e entra na fila da equipe.
+                Existem {{ reversal_candidate_count }} {{ 'vendedor disponivel' if reversal_candidate_count == 1 else 'vendedores disponiveis' }} para receber.
+              </div>
+              <label class="field-label" for="reversal-tabulation-{{ lead.id }}">Tabulacao da reversao</label>
+              <select id="reversal-tabulation-{{ lead.id }}" name="reversal_tabulation" class="form-select mb-3" required>
+                <option value="">Selecione o motivo da reversao</option>
+                {% for option in reversal_tabulation_options %}
+                  <option value="{{ option.value }}">
+                    {{ option.label }} - {{ reversal_priority_label(option.priority) }} / {{ option.sla_hours }}h
+                  </option>
+                {% endfor %}
+              </select>
+              <label class="field-label" for="reversal-note-{{ lead.id }}">Observacao <span class="text-muted">(opcional)</span></label>
+              <textarea
+                id="reversal-note-{{ lead.id }}"
+                name="reversal_note"
+                class="form-control"
+                rows="3"
+                placeholder="Contexto para o sorteio ou orientacao para quem fizer a reversao"
+              ></textarea>
+              <div class="d-flex justify-content-end gap-2 mt-4">
+                <button class="btn btn-outline-secondary" type="button" data-support-modal-close>Cancelar</button>
+                <button class="btn btn-primary" type="submit">Enviar para fila</button>
+              </div>
+            {% else %}
+              <div class="alert alert-warning mt-3 mb-0">
+                Nao existe outro vendedor ativo desta equipe com permissao para receber reversao.
+              </div>
+            {% endif %}
+          </form>
+        </dialog>
+      {% endif %}
+
+      {% if not reversal_only_view and active_reversal_task and can_cancel_active_reversal %}
+        <dialog class="support-modal" id="reversal-cancel-modal-{{ active_reversal_task.id }}">
+          <form method="post" action="{{ url_for('cancel_reversal', task_id=active_reversal_task.id) }}" class="support-modal-card status-modal-card">
+            {% include "_csrf_token.html" %}
+            <input type="hidden" name="next" value="{{ lead_self_url }}">
+            <button class="support-modal-close" type="button" data-support-modal-close aria-label="Fechar">x</button>
+            <p class="field-label mb-1">Reversao</p>
+            <h2 class="support-modal-title">Voltar reversao?</h2>
+            <div class="text-muted small mt-2 mb-3">
+              O historico fica salvo e o cliente sai da reversao ativa. Depois ele pode ser enviado novamente para uma nova rodada.
+            </div>
+            <label class="field-label" for="reversal-cancel-reason-{{ active_reversal_task.id }}">Motivo <span class="text-muted">(opcional)</span></label>
+            <textarea
+              id="reversal-cancel-reason-{{ active_reversal_task.id }}"
+              name="cancel_reason"
+              class="form-control"
+              rows="3"
+              placeholder="Exemplo: reversao feita por engano, cliente voltou para acompanhamento do dono"
+            ></textarea>
+            <div class="d-flex justify-content-end gap-2 mt-4">
+              <button class="btn btn-outline-secondary" type="button" data-support-modal-close>Cancelar</button>
+              <button class="btn btn-primary" type="submit">Confirmar retorno</button>
+            </div>
+          </form>
+        </dialog>
+      {% endif %}
+
+      {% if not reversal_only_view and current_user.can_reject_contract %}
+        <dialog class="support-modal" id="status-loss-modal-{{ lead.id }}">
+          <form method="post" action="{{ url_for('update_lead_status', lead_id=lead.id) }}" class="support-modal-card status-modal-card">
+            {% include "_csrf_token.html" %}
+            <input type="hidden" name="next" value="{{ lead_self_url }}">
+            <input type="hidden" name="status_action" value="recusado">
+            <button class="support-modal-close" type="button" data-support-modal-close aria-label="Fechar">x</button>
+            <p class="field-label mb-1">Status do contrato</p>
+            <h2 class="support-modal-title">Motivo de recusa</h2>
+            <div class="text-muted small mt-2 mb-3">
+              Escolha o motivo e registre uma observacao se precisar.
+            </div>
+            <label class="field-label" for="status-reason-{{ lead.id }}">Motivo</label>
+            <select id="status-reason-{{ lead.id }}" name="status_reason" class="form-select mb-3" required>
+              <option value="">Selecione um motivo</option>
+              {% for reason in loss_reason_options %}
+                <option value="{{ reason }}">{{ reason }}</option>
+              {% endfor %}
+            </select>
+            <label class="field-label" for="status-note-{{ lead.id }}">Anotacao <span class="text-muted">(opcional)</span></label>
+            <textarea
+              id="status-note-{{ lead.id }}"
+              name="status_note"
+              class="form-control"
+              rows="4"
+              placeholder="Contexto da perda, tentativa feita ou combinados"
+            ></textarea>
+            <div class="d-flex justify-content-end gap-2 mt-4">
+              <button class="btn btn-outline-secondary" type="button" data-support-modal-close>Cancelar</button>
+              <button class="btn btn-danger" type="submit">Marcar recusado</button>
+            </div>
+          </form>
+        </dialog>
+      {% endif %}
+
+      {% if not reversal_only_view and current_lead_workflow %}
+        {% set pipeline_stage_track = workflow_stage_tracks.get(current_lead_workflow.id, []) %}
+        <section class="lead-pipeline-section">
+          <div class="lead-pipeline-meta">
+            <div>
+              <div class="lead-pipeline-title">
+                {{ current_lead_workflow.workflow.name if current_lead_workflow.workflow else 'Fluxo operacional' }}
+              </div>
+              <div class="lead-pipeline-current">
+                {{ current_lead_workflow.current_stage.name if current_lead_workflow.current_stage else 'Sem etapa atual' }}
+              </div>
+            </div>
+            <div class="text-muted small">
+              Clique na etapa anterior para voltar ou na proxima liberada para avancar.
+            </div>
+          </div>
+
+          {% if pipeline_stage_track %}
+            <div class="workflow-stage-track" aria-label="Etapas do fluxo">
+              {% for stage_item in pipeline_stage_track %}
+                {% set can_use_stage_button = (stage_item.navigation == 'next' and can_move_lead_workflow(current_user, current_lead_workflow)) or (stage_item.navigation == 'back' and can_move_lead_workflow_backwards(current_user, current_lead_workflow)) %}
+                {% if can_use_stage_button %}
+                  <form
+                    class="workflow-stage-form"
+                    method="post"
+                    action="{{ url_for('move_lead_workflow_stage', lead_workflow_id=current_lead_workflow.id) }}"
+                    data-stage-move-form
+                  >
+                    {% include "_csrf_token.html" %}
+                    <input type="hidden" name="next" value="{{ lead_self_url }}">
+                    <input type="hidden" name="target_stage_id" value="{{ stage_item.stage.id }}">
+                    <button
+                      class="workflow-stage-chip workflow-stage-{{ stage_item.state }} workflow-stage-{{ stage_item.navigation }} {% if stage_item.has_alert %}workflow-stage-alert{% endif %}"
+                      type="submit"
+                      title="{% if stage_item.navigation == 'back' %}Voltar para{% else %}Avancar para{% endif %} {{ stage_item.stage.name }}"
+                    >
+                      <span class="workflow-stage-index">{{ loop.index }}</span>
+                      <span class="workflow-stage-name">{{ stage_item.stage.name }}</span>
+                    </button>
+                  </form>
+                {% else %}
+                  <span class="workflow-stage-chip workflow-stage-{{ stage_item.state }} {% if stage_item.state == 'future' %}workflow-stage-locked{% endif %} {% if stage_item.has_alert %}workflow-stage-alert{% endif %}" title="{{ stage_item.stage.name }}">
+                    <span class="workflow-stage-index">{{ loop.index }}</span>
+                    <span class="workflow-stage-name">{{ stage_item.stage.name }}</span>
+                  </span>
+                {% endif %}
+              {% endfor %}
+            </div>
+          {% endif %}
+        </section>
+      {% endif %}
+
+      <div class="lead-detail-grid">
+        <aside class="lead-profile-column">
+          <form method="post" action="{{ url_for('update_lead', lead_id=lead.id) }}">
+            {% include "_csrf_token.html" %}
+            <input type="hidden" name="next" value="{{ lead_self_url }}">
+
+            <section class="panel lead-profile-card p-4 mb-3">
+          <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+            <div>
+              <p class="field-label mb-1">Ficha do cliente</p>
+              <h2 class="section-title mb-0">Dados cadastrais</h2>
+            </div>
+            {% if not reversal_only_view %}
+              <button class="btn btn-primary btn-sm" type="submit">Salvar ficha</button>
+            {% endif %}
+          </div>
+
+          <div class="row g-3">
+            <div class="col-12 col-md-4">
+              <label class="field-label" for="nome_cliente">Nome cliente</label>
+              <input
+                id="nome_cliente"
+                name="nome_cliente"
+                class="form-control"
+                value="{{ lead.nome_cliente }}"
+                {% if reversal_only_view or not current_user.can_edit_core %}disabled{% endif %}
+              >
+            </div>
+            <div class="col-12 col-md-4">
+              <label class="field-label" for="cpf">CPF</label>
+              <input
+                id="cpf"
+                {% if can_edit_lead_cpf %}name="cpf"{% endif %}
+                class="form-control"
+                value="{{ lead.cpf }}"
+                {% if not can_edit_lead_cpf %}readonly disabled{% endif %}
+              >
+              {{ audit_hint(field_audits.get('cpf')) }}
+            </div>
+            <div class="col-12 col-md-4">
+              <label class="field-label" for="contato">Contato</label>
+              <input
+                id="contato"
+                name="contato"
+                class="form-control"
+                value="{{ lead.contato or '' }}"
+                placeholder="Telefone, WhatsApp ou observacao de contato"
+                {% if reversal_only_view or not current_user.can_edit_contact %}disabled{% endif %}
+              >
+              {{ audit_hint(field_audits.get('contato')) }}
+            </div>
+            <div class="col-12 col-md-3">
+              <label class="field-label" for="equipe">Equipe</label>
+              {% if can_transfer_current_lead and not reversal_only_view %}
+                <select id="equipe" name="equipe" class="form-select">
+                  {% for option in transfer_teams %}
+                    <option value="{{ option.value }}" {% if lead.equipe == option.value %}selected{% endif %}>
+                      {{ option.label }}
+                    </option>
+                  {% endfor %}
+                </select>
+              {% else %}
+                <select
+                  id="equipe"
+                  class="form-select"
+                  disabled
+                >
+                  <option value="{{ lead.equipe }}">{{ lead.equipe }}</option>
+                </select>
+              {% endif %}
+            </div>
+            <div class="col-12 col-md-3">
+              <label class="field-label" for="consultor">Consultor</label>
+              {% if can_transfer_current_lead and not reversal_only_view %}
+                <select id="consultor" name="consultor" class="form-select" data-current-value="{{ lead.consultor }}">
+                  {% for option in transfer_consultores %}
+                    <option value="{{ option.value }}" {% if lead.consultor == option.value %}selected{% endif %}>
+                      {{ option.label }}
+                    </option>
+                  {% endfor %}
+                </select>
+              {% else %}
+                <input
+                  id="consultor"
+                  class="form-control"
+                  value="{{ lead.consultor }}"
+                  disabled
+                >
+              {% endif %}
+              {{ audit_hint(field_audits.get('consultor')) }}
+            </div>
+            <div class="col-12 col-md-3">
+              <label class="field-label" for="data_venda">Data da venda</label>
+              <input
+                id="data_venda"
+                name="data_venda"
+                type="date"
+                class="form-control"
+                value="{{ lead.data_venda.isoformat() if lead.data_venda else '' }}"
+                {% if reversal_only_view or not current_user.can_edit_core %}disabled{% endif %}
+              >
+            </div>
+            <div class="col-12 col-md-3">
+              <label class="field-label" for="concessao">Concessao</label>
+              <input
+                id="concessao"
+                name="concessao"
+                type="date"
+                class="form-control"
+                value="{{ lead.concessao.isoformat() if lead.concessao else '' }}"
+                {% if reversal_only_view or not current_user.can_edit_core %}disabled{% endif %}
+              >
+            </div>
+          </div>
+            </section>
+          </form>
+        </aside>
+
+        <section class="lead-operation-column">
+      {% if reversal_only_view %}
+        <section class="panel p-4 mb-3 reversal-panel reversal-only-panel">
+          <div class="reversal-panel-head">
+            <div>
+              <div class="field-label mb-1">Reversao atribuida</div>
+              <div class="section-title mb-1">{{ lead.nome_cliente }}</div>
+              <div class="text-muted small">
+                Cliente de {{ active_reversal_task.owner_name or lead.consultor or 'outro vendedor' }}.
+                Registre o resultado da reversao quando terminar.
+              </div>
+            </div>
+            {{ reversal_status_chip(active_reversal_task) }}
+          </div>
+          <div class="reversal-meta-grid">
+            <div class="reversal-meta-item">
+              <div class="reversal-meta-label">Tabulacao</div>
+              <div class="reversal-meta-value">{{ reversal_tabulation_label(active_reversal_task.tabulation) if active_reversal_task else '-' }}</div>
+            </div>
+            <div class="reversal-meta-item">
+              <div class="reversal-meta-label">Prioridade</div>
+              <div class="reversal-meta-value">{{ reversal_priority_label(active_reversal_task.priority_level) if active_reversal_task else '-' }}</div>
+            </div>
+            <div class="reversal-meta-item">
+              <div class="reversal-meta-label">SLA</div>
+              <div class="reversal-meta-value">
+                {{ active_reversal_task.sla_hours or '-' }}h
+                {% if active_reversal_task and active_reversal_task.due_at %}
+                  <span class="text-muted fw-normal">ate {{ active_reversal_task.due_at.strftime('%d/%m/%Y %H:%M') }}</span>
+                {% elif active_reversal_task and active_reversal_task.status == 'queued' %}
+                  <span class="text-muted fw-normal">apos atribuicao</span>
+                {% endif %}
+              </div>
+            </div>
+            <div class="reversal-meta-item">
+              <div class="reversal-meta-label">Desbloqueio</div>
+              <div class="reversal-meta-value">
+                {% if active_reversal_task and active_reversal_task.days_to_unlock is not none %}
+                  {{ active_reversal_task.days_to_unlock }} dia{{ '' if active_reversal_task.days_to_unlock in [1, -1] else 's' }}
+                {% else %}
+                  Sem concessao
+                {% endif %}
+              </div>
+            </div>
+            <div class="reversal-meta-item">
+              <div class="reversal-meta-label">Solicitado por</div>
+              <div class="reversal-meta-value">{{ active_reversal_task.requested_by.name if active_reversal_task and active_reversal_task.requested_by else 'Sistema' }}</div>
+            </div>
+          </div>
+          {% if can_work_reversal_task(current_user, active_reversal_task) %}
+            {% set min_note_chars = reversal_min_note_chars(active_reversal_task) %}
+            <div class="d-flex flex-wrap gap-2">
+              <button
+                class="btn btn-success btn-sm"
+                type="button"
+                data-support-modal-open="reversal-complete-modal-{{ active_reversal_task.id }}"
+              >
+                Concluir reversao
+              </button>
+            </div>
+            <dialog class="support-modal" id="reversal-complete-modal-{{ active_reversal_task.id }}">
+              <form method="post" action="{{ url_for('complete_reversal', task_id=active_reversal_task.id) }}" class="support-modal-card status-modal-card">
+                {% include "_csrf_token.html" %}
+                <input type="hidden" name="next" value="{{ back_url }}">
+                <button class="support-modal-close" type="button" data-support-modal-close aria-label="Fechar">x</button>
+                <p class="field-label mb-1">Reversao</p>
+                <h2 class="support-modal-title">Concluir reversao</h2>
+                <div class="text-muted small mt-2 mb-3">
+                  Registre o resultado e um resumo claro da abordagem antes de finalizar.
+                </div>
+                <label class="field-label" for="complete-result-{{ active_reversal_task.id }}">Resultado</label>
+                <select id="complete-result-{{ active_reversal_task.id }}" name="reversal_result" class="form-select" required>
+                  <option value="">Selecione o resultado</option>
+                  {% for option in reversal_result_options(active_reversal_task.tabulation) %}
+                    <option value="{{ option.value }}">{{ option.label }} - {{ option.sentiment_label }}</option>
+                  {% endfor %}
+                </select>
+                <label class="field-label" for="complete-note-{{ active_reversal_task.id }}">Anotacao</label>
+                <textarea
+                  id="complete-note-{{ active_reversal_task.id }}"
+                  name="reversal_note"
+                  class="form-control"
+                  rows="5"
+                  minlength="{{ min_note_chars }}"
+                  required
+                  placeholder="Explique o contato, retorno do cliente e qualquer ponto importante para o dono do contrato"
+                ></textarea>
+                <div class="text-muted small">Minimo de {{ min_note_chars }} caracteres.</div>
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                  <button class="btn btn-outline-secondary" type="button" data-support-modal-close>Cancelar</button>
+                  <button class="btn btn-success" type="submit">Confirmar conclusao</button>
+                </div>
+              </form>
+            </dialog>
+          {% else %}
+            <div class="text-muted small">Esta reversao nao esta disponivel para acao neste momento.</div>
+          {% endif %}
+        </section>
+      {% else %}
+      <section class="panel p-4 mb-3">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+          <div>
+            <div class="section-title">Operacao do cliente</div>
+            <div class="text-muted small">Alertas, responsaveis e tarefas da etapa atual.</div>
+          </div>
+        </div>
+
+        <div class="workflow-summary">
+          {% for item in lead_workflows %}
+            {% set rules = workflow_rules_by_id.get(item.id) %}
+            {% set target_stage = rules.target_stage if rules else none %}
+            {% set workflow_alert = workflow_alerts_by_id.get(item.id) %}
+            <div class="workflow-summary-item">
+              {% set show_workflow_alert = workflow_alert and (not unlock_alert.active or workflow_alert.label != unlock_alert.title or workflow_alert.message != unlock_alert.message) %}
+              {% if show_workflow_alert %}
+                <div class="workflow-missing mb-3">
+                  {{ workflow_alert.label }}. {{ workflow_alert.message }}
+                </div>
+              {% endif %}
+
+              {% if current_lead_workflow and item.id == current_lead_workflow.id %}
+                <section class="unlock-banner compact-unlock-banner {% if unlock_alert.active %}unlock-banner-active unlock-banner-{{ unlock_alert.severity }}{% endif %} mb-3">
+                  <span class="unlock-alert-dot" aria-hidden="true"></span>
+                  <div class="unlock-banner-body">
+                    <div class="unlock-compact-line">
+                      <span class="unlock-banner-title">
+                        {% if unlock_alert.completed %}
+                          {{ unlock_alert.title }}
+                        {% elif not unlock_alert.unlock_date %}
+                          Desbloqueio sem data
+                        {% elif unlock_alert.days_left < 0 %}
+                          Desbloqueio vencido
+                        {% elif unlock_alert.days_left == 0 %}
+                          Desbloqueio hoje
+                        {% elif unlock_alert.days_left == 1 %}
+                          Desbloqueio amanha
+                        {% else %}
+                          Desbloqueio dia {{ unlock_alert.unlock_date.strftime('%d/%m/%Y') }}
+                        {% endif %}
+                      </span>
+                    </div>
+                    <div class="text-muted small mt-1">{{ unlock_alert.message }}</div>
+                  </div>
+                  {% if unlock_alert.unlock_date %}
+                    <div class="unlock-date-pill">
+                      <span class="unlock-date-pill-label">Desbloqueio</span>
+                      <span class="unlock-date-pill-value">{{ unlock_alert.unlock_date.strftime('%d/%m/%Y') }}</span>
+                    </div>
+                  {% endif %}
+                </section>
+              {% endif %}
+
+              {% if unlock_executor_workflow and current_lead_workflow and item.id == current_lead_workflow.id and (item.id == unlock_executor_workflow.id or (item.workflow and item.workflow.slug == '30-dias')) %}
+                {% set can_change_unlock_executor = can_set_unlock_executor(current_user, unlock_executor_workflow) %}
+                <div class="support-panel mb-3">
+                  <div class="support-panel-head">
+                    <div>
+                      <div class="field-label mb-1">Desbloqueio</div>
+                      <div class="support-state">
+                        Sinalize quem fara o desbloqueio.
+                        {% if unlock_executor_workflow.unlock_executor %}
+                          <strong>{{ unlock_executor_display_label(unlock_executor_workflow, current_user) }}</strong>.
+                        {% else %}
+                          <strong>Ainda sem escolha.</strong>
+                        {% endif %}
+                        {% if can_change_unlock_executor %}
+                          <button
+                            class="support-change-button"
+                            type="button"
+                            data-support-modal-open="unlock-responsible-modal-{{ unlock_executor_workflow.id }}"
+                          >
+                            Alterar responsavel?
+                          </button>
+                        {% endif %}
+                      </div>
+                    </div>
+                  </div>
+                  {% if can_change_unlock_executor %}
+                    <dialog class="support-modal" id="unlock-responsible-modal-{{ unlock_executor_workflow.id }}">
+                      <div class="support-modal-card">
+                        <button class="support-modal-close" type="button" data-support-modal-close aria-label="Fechar">x</button>
+                        <p class="field-label mb-1">Desbloqueio</p>
+                        <h3 class="support-modal-title">Alterar responsavel da etapa</h3>
+                        <div class="text-muted small mt-2">
+                          Escolha quem fara o desbloqueio deste cliente.
+                        </div>
+                        <div class="support-modal-actions">
+                          {% for option in unlock_executor_select_options(unlock_executor_workflow, current_user) %}
+                            <form method="post" action="{{ url_for('update_unlock_executor', lead_workflow_id=unlock_executor_workflow.id) }}">
+                              {% include "_csrf_token.html" %}
+                              <input type="hidden" name="next" value="{{ lead_self_url }}">
+                              <input type="hidden" name="unlock_executor" value="{{ option.value }}">
+                              <button class="btn btn-outline-primary btn-sm w-100" type="submit">
+                                {{ option.label }}
+                              </button>
+                            </form>
+                          {% else %}
+                            <div class="text-muted small">Nenhuma troca disponivel agora.</div>
+                          {% endfor %}
+                          <button class="btn btn-outline-secondary btn-sm" type="button" data-support-modal-close>Cancelar</button>
+                        </div>
+                      </div>
+                    </dialog>
+                  {% endif %}
+                </div>
+              {% endif %}
+
+              {% if rules %}
+                {% if can_set_support_executor(current_user, item) %}
+                  <div class="support-panel">
+                    <div class="support-panel-head">
+                      <div>
+                        <div class="field-label mb-1">{{ item.current_stage.name if item.current_stage else 'Etapa' }}</div>
+                        <div class="support-state">
+                          {{ support_decision_prompt(item) }}
+                          {% if item.support_executor %}
+                            <strong>{{ support_executor_display_label(item, current_user) }}</strong>.
+                          {% else %}
+                            <strong>Ainda sem escolha.</strong>
+                          {% endif %}
+                          <button
+                            class="support-change-button"
+                            type="button"
+                            data-support-modal-open="support-responsible-modal-{{ item.id }}"
+                          >
+                            Alterar responsavel?
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <dialog class="support-modal" id="support-responsible-modal-{{ item.id }}">
+                      <div class="support-modal-card">
+                        <button class="support-modal-close" type="button" data-support-modal-close aria-label="Fechar">x</button>
+                        <p class="field-label mb-1">{{ item.current_stage.name if item.current_stage else 'Etapa' }}</p>
+                        <h3 class="support-modal-title">Alterar responsavel da etapa</h3>
+                        <div class="text-muted small mt-2">
+                          Escolha quem fara esta etapa.
+                        </div>
+                        <div class="support-modal-actions">
+                          {% for option in support_executor_select_options(item, current_user) %}
+                            <form method="post" action="{{ url_for('update_support_executor', lead_workflow_id=item.id) }}">
+                              {% include "_csrf_token.html" %}
+                              <input type="hidden" name="next" value="{{ lead_self_url }}">
+                              <input type="hidden" name="support_executor" value="{{ option.value }}">
+                              <button class="btn btn-outline-primary btn-sm w-100" type="submit">
+                                {{ option.label }}
+                              </button>
+                            </form>
+                          {% else %}
+                            <div class="text-muted small">Nenhuma troca disponivel agora.</div>
+                          {% endfor %}
+                          <button class="btn btn-outline-secondary btn-sm" type="button" data-support-modal-close>Cancelar</button>
+                        </div>
+                      </div>
+                    </dialog>
+                  </div>
+                {% endif %}
+
+                {% set can_update_checklist = can_update_lead_workflow_checklist(current_user, item) %}
+                {% set can_resolve_return = support_return_resolution_pending(item) and can_resolve_support_return(current_user, item) %}
+                {% set scheduled_tasks = rules.scheduled_tasks if rules else [] %}
+                {% set seller_execution_task = rules.seller_execution_task if rules else none %}
+                {% set can_advance_workflow = can_move_lead_workflow(current_user, item) and target_stage %}
+                {% set show_advance_button = can_advance_workflow %}
+                {% set show_return_button = show_advance_button and rules.is_return_to_principal %}
+                {% if rules.can_create_task %}
+                  {% set new_task_modal_id = 'new-fidelity-task-' ~ item.id %}
+                  <button class="btn btn-outline-primary btn-sm mt-3" type="button" data-task-modal-open="new-fidelity-task-{{ item.id }}">Adicionar tarefa</button>
+                  <dialog class="support-modal task-complete-modal" id="{{ new_task_modal_id }}" {% if modal_should_open(new_task_modal_id) %}data-modal-auto-open="1"{% endif %}>
+                    <div class="support-modal-content">
+                      <div class="support-modal-header">
+                        <div class="support-modal-title">Adicionar tarefa</div>
+                        <button class="support-modal-close" type="button" data-task-modal-close aria-label="Fechar">&times;</button>
+                      </div>
+                      <form method="post" action="{{ url_for('update_lead_workflow_progress', lead_workflow_id=item.id) }}" class="support-modal-form">
+                        {% include "_csrf_token.html" %}
+                        <input type="hidden" name="next" value="{{ lead_self_url }}">
+                        <input type="hidden" name="workflow_action" value="create_fidelity_task">
+                        <label class="field-label" for="fidelity-task-label-{{ item.id }}">Tarefa</label>
+                        <input id="fidelity-task-label-{{ item.id }}" class="form-control" name="task_label" value="{{ modal_value(new_task_modal_id, 'task_label') }}" maxlength="180" required>
+                        <label class="field-label" for="fidelity-task-date-{{ item.id }}">Prazo</label>
+                        <input id="fidelity-task-date-{{ item.id }}" class="form-control" name="task_due_date" value="{{ modal_value(new_task_modal_id, 'task_due_date') }}" type="date" required>
+                        <div class="support-modal-actions">
+                          <button class="btn btn-primary btn-sm" type="submit">Adicionar tarefa</button>
+                          <button class="btn btn-outline-secondary btn-sm" type="button" data-task-modal-close>Cancelar</button>
+                        </div>
+                      </form>
+                    </div>
+                  </dialog>
+                {% endif %}
+                {% if (rules.checklist and can_update_checklist) or (scheduled_tasks and can_update_checklist) or (seller_execution_task and can_update_checklist) or can_resolve_return or show_advance_button %}
+                  <div class="workflow-progress-form">
+                    {% if (rules.checklist and can_update_checklist) or (scheduled_tasks and can_update_checklist) or (seller_execution_task and can_update_checklist) or can_resolve_return %}
+                      {% set total_task_count = (rules.checklist|length if rules.checklist and can_update_checklist else 0) + (scheduled_tasks|length if scheduled_tasks and can_update_checklist else 0) + (1 if seller_execution_task and can_update_checklist else 0) + (1 if can_resolve_return else 0) %}
+                      <div class="workflow-task-panel mb-3">
+                        <div class="workflow-task-heading">
+                          <div>
+                            <div class="section-title">Proximas tarefas</div>
+                            {% if not rules.is_fidelity %}<div class="text-muted small">Conclua cada tarefa com anotacao antes de liberar a proxima etapa.</div>{% endif %}
+                          </div>
+                          <span class="workflow-task-count">{{ total_task_count }} tarefa{{ '' if total_task_count == 1 else 's' }}</span>
+                        </div>
+                        <div class="workflow-checklist">
+                        {% if can_resolve_return %}
+                          <article class="workflow-task-item">
+                            <span class="workflow-task-main">
+                              <span class="workflow-task-title">Resolver devolucao do apoio</span>
+                              <span class="workflow-task-meta">
+                                {% if item.support_returned_at %}
+                                  <span>Devolvido em {{ item.support_returned_at.strftime('%d/%m/%Y %H:%M') }}</span>
+                                {% endif %}
+                              </span>
+                              <span class="workflow-task-description">
+                                Motivo do apoio: {{ item.support_return_reason or 'Sem motivo registrado' }}
+                              </span>
+                            </span>
+                            <span class="workflow-task-state">Pendente</span>
+                            <button
+                              class="workflow-task-action"
+                              type="button"
+                              data-task-modal-open="support-return-resolution-modal-{{ item.id }}"
+                              aria-label="Resolver devolucao do apoio"
+                            >
+                              &#10003;
+                            </button>
+                          </article>
+                          <dialog class="support-modal task-complete-modal" id="support-return-resolution-modal-{{ item.id }}">
+                            <div class="support-modal-content">
+                              <div class="support-modal-header">
+                                <div>
+                                  <div class="support-modal-title">Resolver devolucao do apoio</div>
+                                  <div class="support-modal-subtitle">{{ item.current_stage.name if item.current_stage else 'Etapa atual' }}</div>
+                                </div>
+                                <button class="support-modal-close" type="button" data-task-modal-close aria-label="Fechar">&times;</button>
+                              </div>
+                              <form method="post" action="{{ url_for('update_lead_workflow_progress', lead_workflow_id=item.id) }}" class="support-modal-form">
+                                {% include "_csrf_token.html" %}
+                                <input type="hidden" name="next" value="{{ lead_self_url }}">
+                                <input type="hidden" name="workflow_action" value="resolve_support_return">
+                                <div class="workflow-task-description mb-2">
+                                  Motivo informado pelo apoio: {{ item.support_return_reason or 'Sem motivo registrado' }}
+                                </div>
+                                <label class="field-label" for="support-return-resolution-note-{{ item.id }}">O que foi corrigido</label>
+                                <textarea
+                                  id="support-return-resolution-note-{{ item.id }}"
+                                  name="task_note"
+                                  class="form-control"
+                                  rows="4"
+                                  placeholder="Explique o que foi corrigido antes de reenviar ao apoio"
+                                  required
+                                ></textarea>
+                                <div class="support-modal-actions">
+                                  <button class="btn btn-primary btn-sm" type="submit">Concluir e reenviar ao apoio</button>
+                                  <button class="btn btn-outline-secondary btn-sm" type="button" data-task-modal-close>Cancelar</button>
+                                </div>
+                              </form>
+                            </div>
+                          </dialog>
+                        {% endif %}
+                        {% if scheduled_tasks and can_update_checklist %}
+                          {% for scheduled in scheduled_tasks %}
+                            <article class="workflow-task-item {% if scheduled.checked %}is-done{% elif scheduled.is_overdue %}is-overdue{% elif not scheduled.is_due %}is-future{% endif %}">
+                              <span class="workflow-task-main">
+                                <span class="workflow-task-title">{{ scheduled.task.label }}</span>
+                                <span class="workflow-task-meta">
+                                  <span>Data {{ scheduled.task.scheduled_for.strftime('%d/%m/%Y') }}</span>
+                                  {% if scheduled.checked and scheduled.task.completed_at %}
+                                    <span>Concluida em {{ scheduled.task.completed_at.strftime('%d/%m/%Y %H:%M') }}</span>
+                                  {% endif %}
+                                </span>
+                              </span>
+                              <span class="workflow-task-state">{{ scheduled.status_label }}</span>
+                              <button
+                                class="workflow-task-action"
+                                type="button"
+                                data-task-modal-open="scheduled-task-modal-{{ item.id }}-{{ scheduled.task.id }}"
+                                aria-label="Concluir tarefa {{ scheduled.task.label }}"
+                                {% if scheduled.checked or not scheduled.is_due %}disabled{% endif %}
+                              >
+                                &#10003;
+                              </button>
+                            </article>
+                            {% if not scheduled.checked and scheduled.is_due %}
+                              <dialog class="support-modal task-complete-modal" id="scheduled-task-modal-{{ item.id }}-{{ scheduled.task.id }}">
+                                <div class="support-modal-content">
+                                  <div class="support-modal-header">
+                                    <div>
+                                      <div class="support-modal-title">Concluir tarefa</div>
+                                      <div class="support-modal-subtitle">{{ scheduled.task.label }}</div>
+                                    </div>
+                                    <button class="support-modal-close" type="button" data-task-modal-close aria-label="Fechar">&times;</button>
+                                  </div>
+                                  <form method="post" action="{{ url_for('update_lead_workflow_progress', lead_workflow_id=item.id) }}" class="support-modal-form">
+                                    {% include "_csrf_token.html" %}
+                                    <input type="hidden" name="next" value="{{ lead_self_url }}">
+                                    <input type="hidden" name="workflow_action" value="complete_scheduled_task">
+                                    <input type="hidden" name="scheduled_task_id" value="{{ scheduled.task.id }}">
+                                    <label class="field-label" for="scheduled-task-note-{{ item.id }}-{{ scheduled.task.id }}">Anotacao da tarefa</label>
+                                    <textarea
+                                      id="scheduled-task-note-{{ item.id }}-{{ scheduled.task.id }}"
+                                      name="task_note"
+                                      class="form-control"
+                                      rows="4"
+                                      placeholder="Descreva a tentativa, retorno ou observacao do cliente"
+                                      required
+                                    ></textarea>
+                                    <div class="support-modal-actions">
+                                      <button class="btn btn-primary btn-sm" type="submit">Concluir tarefa</button>
+                                      <button class="btn btn-outline-secondary btn-sm" type="button" data-task-modal-close>Cancelar</button>
+                                    </div>
+                                  </form>
+                                </div>
+                              </dialog>
+                            {% endif %}
+                          {% endfor %}
+                        {% endif %}
+                        {% if seller_execution_task and can_update_checklist %}
+                          <article class="workflow-task-item {% if seller_execution_task.checked %}is-done{% endif %}">
+                            <span class="workflow-task-main">
+                              <span class="workflow-task-title">{{ seller_execution_task.label }}</span>
+                              <span class="workflow-task-meta">
+                                {% if seller_execution_task.due_at %}
+                                  <span>Prazo {{ seller_execution_task.due_at.strftime('%d/%m/%Y %H:%M') }}</span>
+                                {% endif %}
+                                {% if seller_execution_task.checked and seller_execution_task.completed_at %}
+                                  <span>Concluida em {{ seller_execution_task.completed_at.strftime('%d/%m/%Y %H:%M') }}</span>
+                                {% endif %}
+                              </span>
+                            </span>
+                            <span class="workflow-task-state">
+                              {{ 'Concluida' if seller_execution_task.checked else 'Pendente' }}
+                            </span>
+                            <button
+                              class="workflow-task-action"
+                              type="button"
+                              data-task-modal-open="seller-task-modal-{{ item.id }}-{{ seller_execution_task.key }}"
+                              aria-label="Concluir tarefa {{ seller_execution_task.label }}"
+                              {% if seller_execution_task.checked %}disabled{% endif %}
+                            >
+                              &#10003;
+                            </button>
+                          </article>
+                          {% if not seller_execution_task.checked %}
+                            <dialog class="support-modal task-complete-modal" id="seller-task-modal-{{ item.id }}-{{ seller_execution_task.key }}">
+                              <div class="support-modal-content">
+                                <div class="support-modal-header">
+                                  <div>
+                                    <div class="support-modal-title">Concluir tarefa</div>
+                                    <div class="support-modal-subtitle">{{ seller_execution_task.label }}</div>
+                                  </div>
+                                  <button class="support-modal-close" type="button" data-task-modal-close aria-label="Fechar">&times;</button>
+                                </div>
+                                <form method="post" action="{{ url_for('update_lead_workflow_progress', lead_workflow_id=item.id) }}" class="support-modal-form">
+                                  {% include "_csrf_token.html" %}
+                                  <input type="hidden" name="next" value="{{ lead_self_url }}">
+                                  <input type="hidden" name="workflow_action" value="complete_seller_execution_task">
+                                  <input type="hidden" name="seller_task_key" value="{{ seller_execution_task.key }}">
+                                  <label class="field-label" for="seller-task-note-{{ item.id }}-{{ seller_execution_task.key }}">Anotacao da tarefa</label>
+                                  <textarea
+                                    id="seller-task-note-{{ item.id }}-{{ seller_execution_task.key }}"
+                                    name="task_note"
+                                    class="form-control"
+                                    rows="4"
+                                    placeholder="Descreva o que foi feito, retorno ou observacao do cliente"
+                                    required
+                                  ></textarea>
+                                  <div class="support-modal-actions">
+                                    <button class="btn btn-primary btn-sm" type="submit">Concluir tarefa</button>
+                                    <button class="btn btn-outline-secondary btn-sm" type="button" data-task-modal-close>Cancelar</button>
+                                  </div>
+                                </form>
+                              </div>
+                            </dialog>
+                          {% endif %}
+                        {% endif %}
+                        {% if rules.checklist and can_update_checklist %}
+                        {% for checklist in rules.checklist %}
+                          <article class="workflow-task-item {% if checklist.checked %}is-done{% endif %}">
+                            <span class="workflow-task-main">
+                              <span class="workflow-task-title">{{ checklist.item.label }}</span>
+                              <span class="workflow-task-meta">
+                                {% if checklist.due_at %}
+                                  <span>Prazo {{ checklist.due_at.strftime('%d/%m/%Y %H:%M') }}</span>
+                                {% endif %}
+                                {% if checklist.checked and checklist.check and checklist.check.checked_at %}
+                                  <span>Concluida em {{ checklist.check.checked_at.strftime('%d/%m/%Y %H:%M') }}</span>
+                                {% endif %}
+                              </span>
+                              {% if checklist.item.description %}
+                                <span class="workflow-task-description">{{ checklist.item.description }}</span>
+                              {% endif %}
+                            </span>
+                            <span class="workflow-task-state">
+                              {{ 'Concluida' if checklist.checked else 'Aguarda tarefa anterior' if checklist.blocked else 'Pendente' }}
+                            </span>
+                            <button
+                              class="workflow-task-action"
+                              type="button"
+                              data-task-modal-open="task-modal-{{ item.id }}-{{ checklist.item.id }}"
+                              aria-label="Concluir tarefa {{ checklist.item.label }}"
+                              {% if checklist.checked or checklist.blocked %}disabled title="{{ 'Tarefa concluida' if checklist.checked else 'Conclua a tarefa anterior' }}"{% endif %}
+                            >
+                              &#10003;
+                            </button>
+                          </article>
+                          {% if not checklist.checked %}
+                            <dialog class="support-modal task-complete-modal" id="task-modal-{{ item.id }}-{{ checklist.item.id }}">
+                              <div class="support-modal-content">
+                                <div class="support-modal-header">
+                                  <div>
+                                    <div class="support-modal-title">Concluir tarefa</div>
+                                    <div class="support-modal-subtitle">{{ checklist.item.label }}</div>
+                                  </div>
+                                  <button class="support-modal-close" type="button" data-task-modal-close aria-label="Fechar">&times;</button>
+                                </div>
+                                <form method="post" action="{{ url_for('update_lead_workflow_progress', lead_workflow_id=item.id) }}" class="support-modal-form">
+                                  {% include "_csrf_token.html" %}
+                                  <input type="hidden" name="next" value="{{ lead_self_url }}">
+                                  <input type="hidden" name="workflow_action" value="complete_checklist_item">
+                                  <input type="hidden" name="checklist_item_id" value="{{ checklist.item.id }}">
+                                  <label class="field-label" for="task-note-{{ item.id }}-{{ checklist.item.id }}">Anotacao da tarefa</label>
+                                  <textarea
+                                    id="task-note-{{ item.id }}-{{ checklist.item.id }}"
+                                    name="task_note"
+                                    class="form-control"
+                                    rows="4"
+                                    placeholder="Descreva o que foi feito, retorno ou observacao do cliente"
+                                    required
+                                  ></textarea>
+                                  <div class="support-modal-actions">
+                                    <button class="btn btn-primary btn-sm" type="submit">Concluir tarefa</button>
+                                    <button class="btn btn-outline-secondary btn-sm" type="button" data-task-modal-close>Cancelar</button>
+                                  </div>
+                                </form>
+                              </div>
+                            </dialog>
+                          {% endif %}
+                        {% endfor %}
+                        {% endif %}
+                        </div>
+                      </div>
+                    {% endif %}
+
+                    {% if show_advance_button %}
+                      <form method="post" action="{{ url_for('update_lead_workflow_progress', lead_workflow_id=item.id) }}">
+                        {% include "_csrf_token.html" %}
+                        <input type="hidden" name="next" value="{{ lead_self_url }}">
+                        <input type="hidden" name="workflow_action" value="advance">
+                        <button class="btn btn-primary btn-sm" type="submit">
+                          {% if show_return_button %}
+                            Concluir e voltar para {{ target_stage.name }}
+                          {% else %}
+                            Avancar para {{ target_stage.name }}
+                          {% endif %}
+                        </button>
+                      </form>
+                    {% endif %}
+                  </div>
+                {% elif not target_stage and not rules.is_fidelity %}
+                  <div class="text-muted small mt-3">Este cliente ja esta na ultima etapa deste fluxo.</div>
+                {% endif %}
+              {% endif %}
+            </div>
+          {% else %}
+            <div class="workflow-summary-item text-muted">Cliente ainda sem fluxo vinculado.</div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="panel p-4 mb-3">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+          <div>
+            <div class="section-title">Historico do cliente</div>
+            <div class="text-muted small">Atuacoes, tarefas, apoio e movimentacoes ficam organizados por acontecimento.</div>
+          </div>
+        </div>
+
+        <div class="history-tabs">
+          <input class="history-tab-input" type="radio" name="lead-history-tab" id="history-tab-operational" checked>
+          <input class="history-tab-input" type="radio" name="lead-history-tab" id="history-tab-reversals">
+
+          <div class="history-tab-nav" role="tablist" aria-label="Historico do cliente">
+            <label class="history-tab-button" for="history-tab-operational" role="tab">
+              Operacional
+              <span class="history-tab-count">{{ operational_history|length }}</span>
+            </label>
+            <label class="history-tab-button" for="history-tab-reversals" role="tab">
+              Reversoes
+              <span class="history-tab-count">{{ reversal_history|length }}</span>
+            </label>
+          </div>
+
+          <div class="history-tab-content">
+            <div class="history-tab-pane history-tab-pane-operational" role="tabpanel">
+              <div class="activity-list">
+                {% set history_context = namespace(value='') %}
+                {% for entry in operational_history %}
+                  {% if entry.context_label and entry.context_label != history_context.value %}
+                    <div class="history-context-divider">{{ entry.context_label }}</div>
+                    {% set history_context.value = entry.context_label %}
+                  {% endif %}
+                  <article class="activity-item">
+                    <div class="history-event-title-row">
+                      <div class="history-event-title">
+                        {{ entry.title }}
+                        {% if entry.title_detail %}<strong>{{ entry.title_detail }}</strong>{% endif %}
+                      </div>
+                    </div>
+                    <div class="history-event-meta">
+                      {{ entry.created_at.strftime('%d/%m/%Y %H:%M') }}
+                      {% if entry.user %} - {{ entry.user }}{% endif %}
+                    </div>
+                    {% if entry.subtitle %}
+                      <div class="history-event-detail">{{ entry.subtitle }}</div>
+                    {% endif %}
+                    {% if entry.body %}
+                      <div class="activity-body">{{ entry.body }}</div>
+                    {% endif %}
+                  </article>
+                {% else %}
+                  <div class="activity-item text-muted">Nenhum historico operacional registrado ainda.</div>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="history-tab-pane history-tab-pane-reversals" role="tabpanel">
+              <div class="activity-list">
+                {% for entry in reversal_history %}
+                  <article class="activity-item">
+                    <div class="history-event-title-row">
+                      <div class="history-event-title">
+                        {{ entry.title }}
+                        {% if entry.title_detail %}<strong>{{ entry.title_detail }}</strong>{% endif %}
+                      </div>
+                      <span class="activity-source">{{ entry.badge }}</span>
+                    </div>
+                    <div class="history-event-meta">
+                      {{ entry.created_at.strftime('%d/%m/%Y %H:%M') }}
+                      {% if entry.user %} - {{ entry.user }}{% endif %}
+                    </div>
+                    {% if entry.subtitle %}
+                      <div class="history-event-detail">{{ entry.subtitle }}</div>
+                    {% endif %}
+                    {% if entry.body %}
+                      <div class="activity-body">{{ entry.body }}</div>
+                    {% endif %}
+                  </article>
+                {% else %}
+                  <div class="activity-item text-muted">Nenhuma reversao registrada ainda.</div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {% if can_view_lead_audit %}
+      <section class="panel p-4 mb-3">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+          <div>
+            <div class="section-title">Auditoria da ficha</div>
+            <div class="text-muted small">Registro recente de quem criou, importou ou editou este cliente.</div>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Quando</th>
+                <th>Usuario</th>
+                <th>Acao</th>
+                <th>Campo</th>
+                <th>De</th>
+                <th>Para</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for event in audit_events %}
+                <tr>
+                  <td>{{ event.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                  <td>{{ event.user.name if event.user else 'Sistema' }}</td>
+                  <td>{{ action_label(event.action) }}</td>
+                  <td>{{ field_label(event.field_name) }}</td>
+                  <td class="text-muted small">{{ event.old_value or '-' }}</td>
+                  <td class="text-muted small">{{ event.new_value or '-' }}</td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="6" class="text-center text-muted py-4">
+                    Nenhum evento registrado ainda.
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      {% endif %}
+
+      {% if current_user.can_delete_leads %}
+        <section class="panel p-4">
+          <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+              <div class="section-title">Zona administrativa</div>
+              <div class="text-muted small">Exclusao remove o cliente das telas e mantem o historico auditavel.</div>
+            </div>
+            <form method="post" action="{{ url_for('delete_lead', lead_id=lead.id) }}">
+              {% include "_csrf_token.html" %}
+              <input type="hidden" name="next" value="{{ url_for('dashboard') }}">
+              <button class="btn btn-outline-danger" type="submit">Excluir cliente</button>
+            </form>
+          </div>
+        </section>
+      {% endif %}
+      {% endif %}
+        </section>
+      </div>
+    </main>
+    <script>
+      const transferConsultoresByTeam = {{ transfer_consultores_by_team|tojson }};
+      const equipeSelect = document.getElementById("equipe");
+      const consultorSelect = document.getElementById("consultor");
+
+      function syncConsultoresByTeam() {
+        if (!equipeSelect || !consultorSelect || consultorSelect.tagName !== "SELECT") {
+          return;
+        }
+        const options = transferConsultoresByTeam[equipeSelect.value] || [];
+        const preferredValue = consultorSelect.dataset.currentValue || consultorSelect.value;
+        consultorSelect.innerHTML = "";
+
+        if (!options.length) {
+          const emptyOption = document.createElement("option");
+          emptyOption.value = "";
+          emptyOption.textContent = "Nenhum consultor disponivel";
+          consultorSelect.appendChild(emptyOption);
+          consultorSelect.disabled = true;
+          return;
+        }
+
+        options.forEach((item) => {
+          const option = document.createElement("option");
+          option.value = item.value;
+          option.textContent = item.label || item.value;
+          if (item.value === preferredValue) {
+            option.selected = true;
+          }
+          consultorSelect.appendChild(option);
+        });
+
+        if (!consultorSelect.value) {
+          consultorSelect.value = options[0].value;
+        }
+        consultorSelect.disabled = false;
+        consultorSelect.dataset.currentValue = consultorSelect.value;
+      }
+
+      if (equipeSelect && consultorSelect) {
+        syncConsultoresByTeam();
+        equipeSelect.addEventListener("change", () => {
+          consultorSelect.dataset.currentValue = "";
+          syncConsultoresByTeam();
+        });
+        consultorSelect.addEventListener("change", () => {
+          consultorSelect.dataset.currentValue = consultorSelect.value;
+        });
+      }
+
+      document.querySelectorAll(".workflow-stage-track").forEach((track) => {
+        const currentStage = track.querySelector(".workflow-stage-current");
+        if (currentStage) {
+          currentStage.scrollIntoView({ block: "nearest", inline: "center" });
+        }
+      });
+
+      document.querySelectorAll("[data-support-modal-open]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const modal = document.getElementById(button.dataset.supportModalOpen);
+          if (!modal) {
+            return;
+          }
+          if (typeof modal.showModal === "function") {
+            modal.showModal();
+          } else {
+            modal.setAttribute("open", "");
+          }
+        });
+      });
+
+      document.querySelectorAll("[data-task-modal-open]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const modal = document.getElementById(button.dataset.taskModalOpen);
+          if (!modal) {
+            return;
+          }
+          if (typeof modal.showModal === "function") {
+            modal.showModal();
+          } else {
+            modal.setAttribute("open", "");
+          }
+          const note = modal.querySelector("textarea");
+          if (note) {
+            note.focus();
+          }
+        });
+      });
+
+      document.querySelectorAll('dialog[data-modal-auto-open="1"]').forEach((modal) => {
+        modal.showModal();
+      });
+
+      document.querySelectorAll(".support-modal").forEach((modal) => {
+        const closeModal = () => {
+          if (typeof modal.close === "function") {
+            modal.close();
+          } else {
+            modal.removeAttribute("open");
+          }
+        };
+        modal.querySelectorAll("[data-support-modal-close]").forEach((button) => {
+          button.addEventListener("click", closeModal);
+        });
+        modal.querySelectorAll("[data-task-modal-close]").forEach((button) => {
+          button.addEventListener("click", closeModal);
+        });
+        modal.addEventListener("click", (event) => {
+          if (event.target === modal) {
+            closeModal();
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

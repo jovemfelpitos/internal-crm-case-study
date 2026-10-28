@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mini CRM - Empresa</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}">
+    {% include "_theme_head.html" %}
+  </head>
+  <body>
+    {% include "_app_sidebar.html" %}
+    <main class="container-fluid admin-page-shell py-4 app-main">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <header class="admin-page-header">
+        <div>
+          <div class="admin-eyebrow">Empresa</div>
+          <h1 class="h3 mb-1">{{ company.name }}</h1>
+          <div class="text-muted">Visao geral da configuracao administrativa do CRM.</div>
+        </div>
+        <span class="crm-chip" style="--chip-color: #2563eb;">Franquia padrao: {{ franchise.name }}</span>
+      </header>
+
+      {% include "_company_subnav.html" %}
+
+      <section class="admin-card-grid mb-4">
+        <article class="admin-card">
+          <div class="admin-card-body">
+            <div class="admin-card-meta">Usuarios ativos</div>
+            <div class="admin-stat-value">{{ metrics.active_users }}</div>
+            <div class="text-muted small">{{ metrics.users }} usuarios cadastrados</div>
+          </div>
+        </article>
+        <article class="admin-card">
+          <div class="admin-card-body">
+            <div class="admin-card-meta">Equipes</div>
+            <div class="admin-stat-value">{{ metrics.teams }}</div>
+            <div class="text-muted small">Carteiras e supervisoes operacionais</div>
+          </div>
+        </article>
+        <article class="admin-card">
+          <div class="admin-card-body">
+            <div class="admin-card-meta">Franquias</div>
+            <div class="admin-stat-value">{{ metrics.franchises }}</div>
+            <div class="text-muted small">Unidades vinculadas a empresa</div>
+          </div>
+        </article>
+        <article class="admin-card">
+          <div class="admin-card-body">
+            <div class="admin-card-meta">Cargos</div>
+            <div class="admin-stat-value">{{ metrics.roles }}</div>
+            <div class="text-muted small">Pacotes de permissao</div>
+          </div>
+        </article>
+      </section>
+
+      <section class="admin-table-card mb-4">
+        <div class="admin-table-toolbar">
+          <div>
+            <div class="admin-card-title">Saude da configuracao</div>
+            <div class="admin-card-meta">Pendencias que podem atrapalhar operacao, acesso ou auditoria.</div>
+          </div>
+        </div>
+        <div class="admin-health-grid">
+          {% for check in health_checks %}
+            <a class="admin-health-item text-decoration-none" href="{{ check.href }}">
+              <div>
+                <span class="admin-health-dot is-{{ check.severity }}"></span>
+              </div>
+              <div class="min-w-0">
+                <div class="fw-semibold">{{ check.label }}</div>
+                <div class="text-muted small">{{ check.action }}</div>
+              </div>
+              <strong>{{ check.count }}</strong>
+            </a>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="admin-overview-grid mb-4">
+        <article class="admin-table-card">
+          <div class="admin-table-toolbar">
+            <div>
+              <div class="admin-card-title">Acessos Google pendentes</div>
+              <div class="admin-card-meta">Tentativas aguardando liberacao.</div>
+            </div>
+            {% if current_user.can_manage_users %}
+              <a class="admin-action-button text-decoration-none" href="{{ url_for('users_admin') }}">Abrir</a>
+            {% endif %}
+          </div>
+          <div class="admin-list-panel">
+            {% for access_request in pending_requests %}
+              <div class="admin-list-row">
+                <div class="min-w-0">
+                  <div class="fw-semibold text-truncate">{{ access_request.name }}</div>
+                  <div class="text-muted small text-truncate">{{ access_request.email }}</div>
+                </div>
+                <span class="badge rounded-pill text-bg-warning">{{ access_request.last_attempt_at.strftime('%d/%m %H:%M') }}</span>
+              </div>
+            {% else %}
+              <div class="text-muted small p-3">Nenhuma solicitacao pendente.</div>
+            {% endfor %}
+          </div>
+        </article>
+
+        <article class="admin-table-card">
+          <div class="admin-table-toolbar">
+            <div>
+              <div class="admin-card-title">Usuarios para organizar</div>
+              <div class="admin-card-meta">Sem equipe ou franquia definida.</div>
+            </div>
+            {% if current_user.can_manage_users %}
+              <a class="admin-action-button text-decoration-none" href="{{ url_for('users_admin', active='active') }}">Abrir</a>
+            {% endif %}
+          </div>
+          <div class="admin-list-panel">
+            {% for user in users_to_review[:8] %}
+              <div class="admin-list-row">
+                <div class="d-flex align-items-center gap-2 min-w-0">
+                  <span class="admin-avatar" aria-hidden="true">{{ user.name[:1] }}</span>
+                  <div class="min-w-0">
+                    <div class="fw-semibold text-truncate">{{ user.name }}</div>
+                    <div class="text-muted small text-truncate">
+                      {% if not user.team %}sem equipe{% endif %}
+                      {% if not user.team and not user.franchise_id %} · {% endif %}
+                      {% if not user.franchise_id %}sem franquia{% endif %}
+                    </div>
+                  </div>
+                </div>
+                <span class="badge rounded-pill text-bg-secondary">{{ user.role }}</span>
+              </div>
+            {% else %}
+              <div class="text-muted small p-3">Usuarios ativos estao organizados.</div>
+            {% endfor %}
+          </div>
+        </article>
+      </section>
+
+      <section class="admin-overview-grid">
+        <article class="admin-table-card">
+          <div class="admin-table-toolbar">
+            <div>
+              <div class="admin-card-title">Equipes que pedem revisao</div>
+              <div class="admin-card-meta">Sem franquia ou sem usuarios ativos.</div>
+            </div>
+            {% if current_user.can_manage_teams %}
+              <a class="admin-action-button text-decoration-none" href="{{ url_for('company_teams_admin') }}">Abrir</a>
+            {% endif %}
+          </div>
+          <div class="admin-list-panel">
+            {% for team in teams_to_review[:8] %}
+              <div class="admin-list-row">
+                <div class="min-w-0">
+                  <div class="fw-semibold text-truncate">{{ team.name }}</div>
+                  <div class="text-muted small text-truncate">
+                    {% if not team.franchise_id %}sem franquia{% endif %}
+                    {% if not team.franchise_id and team in empty_teams %} · {% endif %}
+                    {% if team in empty_teams %}sem usuarios{% endif %}
+                  </div>
+                </div>
+                {% if team.active %}
+                  <span class="badge rounded-pill text-bg-success">Ativa</span>
+                {% else %}
+                  <span class="badge rounded-pill text-bg-secondary">Inativa</span>
+                {% endif %}
+              </div>
+            {% else %}
+              <div class="text-muted small p-3">Equipes principais estao coerentes.</div>
+            {% endfor %}
+          </div>
+        </article>
+
+        <article class="admin-table-card">
+          <div class="admin-table-toolbar">
+            <div>
+              <div class="admin-card-title">Cargos para auditar</div>
+              <div class="admin-card-meta">Cargos sensiveis ou sem usuarios.</div>
+            </div>
+            {% if current_user.can_manage_roles %}
+              <a class="admin-action-button text-decoration-none" href="{{ url_for('company_roles_admin') }}">Abrir</a>
+            {% endif %}
+          </div>
+          <div class="admin-list-panel">
+            {% for profile in roles_to_review[:8] %}
+              <div class="admin-list-row">
+                <div class="min-w-0">
+                  <div class="fw-semibold text-truncate">{{ profile.name }}</div>
+                  <div class="text-muted small text-truncate">{{ profile.description or profile.base_role }}</div>
+                </div>
+                {% if profile in sensitive_roles %}
+                  <span class="badge rounded-pill text-bg-danger">sensivel</span>
+                {% else %}
+                  <span class="badge rounded-pill text-bg-secondary">sem usuarios</span>
+                {% endif %}
+              </div>
+            {% else %}
+              <div class="text-muted small p-3">Cargos ativos estao bem distribuidos.</div>
+            {% endfor %}
+          </div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

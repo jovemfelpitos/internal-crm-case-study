@@ -1,0 +1,274 @@
+<aside class="app-sidebar">
+  <div>
+    <a class="app-brand" href="{{ url_for('dashboard') }}" aria-label="Mini CRM">
+      <span class="app-brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false">
+          <path d="M12 2 21 7v10l-9 5-9-5V7l9-5Z"></path>
+          <path d="M7 9.5 12 7l5 2.5-5 2.5-5-2.5Z"></path>
+        </svg>
+      </span>
+      <span class="app-brand-title">CRM</span>
+    </a>
+
+    <nav class="app-nav" aria-label="Menu principal">
+      <a
+        class="app-nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}"
+        href="{{ url_for('dashboard') }}"
+        data-tooltip="Clientes"
+        aria-label="Clientes"
+      >
+        <span class="app-nav-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M4 10.5 12 4l8 6.5"></path>
+            <path d="M6 10v9h12v-9"></path>
+            <path d="M10 19v-5h4v5"></path>
+          </svg>
+        </span>
+        <span class="app-nav-text">Clientes</span>
+      </a>
+
+      <a
+        class="app-nav-link {% if request.endpoint == 'workflows_board' %}active{% endif %}"
+        href="{{ url_for('workflows_board') }}"
+        data-tooltip="Fluxos"
+        aria-label="Fluxos"
+      >
+        <span class="app-nav-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M5 5h4v14H5z"></path>
+            <path d="M10 5h4v14h-4z"></path>
+            <path d="M15 5h4v14h-4z"></path>
+          </svg>
+        </span>
+        <span class="app-nav-text">Fluxos</span>
+      </a>
+
+      {% if current_user.can_view_all or current_user.can_request_support or current_user.can_act_as_support %}
+        <a
+          class="app-nav-link {% if request.endpoint == 'support_queue' %}active{% endif %}"
+          href="{{ url_for('support_queue') }}"
+          data-tooltip="Apoio"
+          aria-label="Apoio"
+        >
+          <span class="app-nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M7 11.5 10 14.5 17 7.5"></path>
+              <path d="M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z"></path>
+            </svg>
+          </span>
+          <span class="app-nav-text">Apoio</span>
+          {% if support_notification_count %}
+            <span class="app-nav-badge" aria-label="{{ support_notification_count }} alertas de apoio">{{ support_notification_count }}</span>
+          {% endif %}
+        </a>
+      {% endif %}
+
+      {% if current_user.can_manage_reversals or current_user.can_work_reversal %}
+        <a
+          class="app-nav-link {% if request.endpoint == 'reversal_queue' %}active{% endif %}"
+          href="{{ url_for('reversal_queue') }}"
+          data-tooltip="Reversoes"
+          aria-label="Reversoes"
+        >
+          <span class="app-nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M7 7h10"></path>
+              <path d="M17 7l-3-3"></path>
+              <path d="M17 7l-3 3"></path>
+              <path d="M17 17H7"></path>
+              <path d="M7 17l3-3"></path>
+              <path d="M7 17l3 3"></path>
+              <path d="M4 12h16"></path>
+            </svg>
+          </span>
+          <span class="app-nav-text">Reversoes</span>
+          {% if reversal_notification_count %}
+            <span class="app-nav-badge" aria-label="{{ reversal_notification_count }} alertas de reversao">{{ reversal_notification_count }}</span>
+          {% endif %}
+        </a>
+      {% endif %}
+
+      {% if current_user.can_create_leads %}
+        <a
+          class="app-nav-link {% if request.endpoint == 'create_lead' %}active{% endif %}"
+          href="{{ url_for('create_lead') }}"
+          data-tooltip="Novo cliente"
+          aria-label="Novo cliente"
+        >
+          <span class="app-nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M8 7a4 4 0 1 1 8 0 4 4 0 0 1-8 0Z"></path>
+              <path d="M5 21a7 7 0 0 1 14 0"></path>
+              <path d="M19 8v6"></path>
+              <path d="M16 11h6"></path>
+            </svg>
+          </span>
+          <span class="app-nav-text">Novo cliente</span>
+        </a>
+      {% endif %}
+
+      <div class="app-nav-group">
+        <button
+          class="app-nav-link app-nav-button"
+          type="button"
+          data-tooltip="Atividades"
+          aria-label="Atividades"
+          aria-haspopup="true"
+        >
+          <span class="app-nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M9 6h11"></path>
+              <path d="M9 12h11"></path>
+              <path d="M9 18h11"></path>
+              <path d="M4 6l1 1 2-2"></path>
+              <path d="M4 12l1 1 2-2"></path>
+              <path d="M4 18l1 1 2-2"></path>
+            </svg>
+          </span>
+          <span class="app-nav-text">Atividades</span>
+        </button>
+        <div class="app-nav-popover" role="menu">
+          <div class="app-nav-popover-title">Atividades</div>
+          <a href="{{ url_for('dashboard', sort='ultima_atualizacao', direction='asc') }}" role="menuitem">
+            Sem atualização recente
+          </a>
+          {% if current_user.can_bulk_reactivate_leads or current_user.can_reactivate_leads or current_user.can_view_all %}
+            <a href="{{ url_for('dashboard', state='inactive') }}" role="menuitem">Clientes inativos</a>
+          {% endif %}
+          {% if current_user.can_create_leads %}
+            <a href="{{ url_for('create_lead') }}" role="menuitem">Novo cliente</a>
+          {% endif %}
+          {% if current_user.can_view_audit %}
+            <a href="{{ url_for('audit_admin') }}" role="menuitem">Auditoria</a>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if current_user.can_manage_users or current_user.can_manage_teams or current_user.can_manage_roles %}
+        <div class="app-nav-group">
+          <button
+            class="app-nav-link app-nav-button {% if request.endpoint in ['company_admin', 'users_admin', 'company_teams_admin', 'company_franchises_admin', 'company_roles_admin'] %}active{% endif %}"
+            type="button"
+            data-tooltip="Empresa"
+            aria-label="Empresa"
+            aria-haspopup="true"
+          >
+            <span class="app-nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false">
+                <path d="M4 20V7l8-4 8 4v13"></path>
+                <path d="M9 20v-6h6v6"></path>
+                <path d="M8 9h.01"></path>
+                <path d="M12 9h.01"></path>
+                <path d="M16 9h.01"></path>
+              </svg>
+            </span>
+            <span class="app-nav-text">Empresa</span>
+          </button>
+          <div class="app-nav-popover" role="menu">
+            <div class="app-nav-popover-title">Empresa</div>
+            <a href="{{ url_for('company_admin') }}" role="menuitem">Visao geral</a>
+            {% if current_user.can_manage_users %}
+              <a href="{{ url_for('users_admin') }}" role="menuitem">Usuarios</a>
+            {% endif %}
+            {% if current_user.can_manage_teams %}
+              <a href="{{ url_for('company_teams_admin') }}" role="menuitem">Equipes</a>
+            {% endif %}
+            {% if current_user.can_manage_teams or current_user.can_manage_users %}
+              <a href="{{ url_for('company_franchises_admin') }}" role="menuitem">Franquias</a>
+            {% endif %}
+            {% if current_user.can_manage_roles %}
+              <a href="{{ url_for('company_roles_admin') }}" role="menuitem">Cargos / Permissoes</a>
+            {% endif %}
+          </div>
+        </div>
+      {% endif %}
+
+      {% if current_user.can_manage_settings %}
+        <a
+          class="app-nav-link {% if request.endpoint == 'settings_admin' %}active{% endif %}"
+          href="{{ url_for('settings_admin') }}"
+          data-tooltip="Listas"
+          aria-label="Listas"
+        >
+          <span class="app-nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z"></path>
+              <path d="M4 12h2"></path>
+              <path d="M18 12h2"></path>
+              <path d="M12 4v2"></path>
+              <path d="M12 18v2"></path>
+              <path d="M6.5 6.5 8 8"></path>
+              <path d="M16 16l1.5 1.5"></path>
+              <path d="M17.5 6.5 16 8"></path>
+              <path d="M8 16l-1.5 1.5"></path>
+            </svg>
+          </span>
+          <span class="app-nav-text">Listas</span>
+        </a>
+      {% endif %}
+
+      {% if current_user.can_manage_workflows %}
+        <a
+          class="app-nav-link {% if request.endpoint in ['workflows_admin'] %}active{% endif %}"
+          href="{{ url_for('workflows_admin') }}"
+          data-tooltip="Admin fluxos"
+          aria-label="Admin fluxos"
+        >
+          <span class="app-nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M4 6h7"></path>
+              <path d="M13 6h7"></path>
+              <path d="M4 12h5"></path>
+              <path d="M11 12h9"></path>
+              <path d="M4 18h9"></path>
+              <path d="M15 18h5"></path>
+              <path d="M11 4v4"></path>
+              <path d="M9 10v4"></path>
+              <path d="M13 16v4"></path>
+            </svg>
+          </span>
+          <span class="app-nav-text">Admin fluxos</span>
+        </a>
+      {% endif %}
+
+      {% if current_user.can_view_audit %}
+        <a
+          class="app-nav-link {% if request.endpoint == 'audit_admin' %}active{% endif %}"
+          href="{{ url_for('audit_admin') }}"
+          data-tooltip="Auditoria"
+          aria-label="Auditoria"
+        >
+          <span class="app-nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M5 20V10"></path>
+              <path d="M12 20V4"></path>
+              <path d="M19 20v-7"></path>
+              <path d="M3 20h18"></path>
+              <path d="M5 10l7-6 7 9"></path>
+            </svg>
+          </span>
+          <span class="app-nav-text">Auditoria</span>
+        </a>
+      {% endif %}
+    </nav>
+  </div>
+
+  <div class="app-sidebar-footer">
+    {% include "_theme_toggle.html" %}
+    <a class="app-user {% if request.endpoint == 'account_password' %}active{% endif %}" href="{{ url_for('account_password') }}" data-tooltip="Minha senha" aria-label="Minha senha">
+      <div class="app-user-initial" aria-hidden="true">{{ current_user.name[:1] }}</div>
+      <div class="app-user-text">
+        <div class="fw-semibold text-truncate">{{ current_user.name }}</div>
+        <div class="text-muted small text-truncate">
+          {{ current_user.role }}{% if current_user.team %} · {{ current_user.team }}{% endif %}
+        </div>
+      </div>
+    </a>
+    <form method="post" action="{{ url_for('logout') }}">
+      {% include "_csrf_token.html" %}
+      <button class="btn btn-outline-secondary btn-sm app-logout" data-tooltip="Sair" aria-label="Sair">
+        <span aria-hidden="true">Sair</span>
+      </button>
+    </form>
+  </div>
+</aside>

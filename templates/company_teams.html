@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mini CRM - Equipes</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}">
+    {% include "_theme_head.html" %}
+  </head>
+  <body>
+    {% include "_app_sidebar.html" %}
+    <main class="container-fluid admin-page-shell py-4 app-main">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      {% set inactive_teams = teams|rejectattr('active')|list %}
+      {% set total_users = namespace(value=0) %}
+      {% set total_leads = namespace(value=0) %}
+      {% for team in teams %}
+        {% set usage = team_usage_counts(team) %}
+        {% set total_users.value = total_users.value + usage.users %}
+        {% set total_leads.value = total_leads.value + usage.leads %}
+      {% endfor %}
+
+      <header class="admin-page-header">
+        <div>
+          <div class="admin-eyebrow">Empresa / Equipes</div>
+          <h1 class="h3 mb-1">Equipes</h1>
+          <div class="text-muted">Organize times comerciais, membros e franquia operacional de cada equipe.</div>
+        </div>
+        <button class="btn btn-primary" type="button" data-dialog-open="team-create-dialog">Nova equipe</button>
+      </header>
+
+      {% include "_company_subnav.html" %}
+
+      <div class="admin-card-grid mb-4">
+        <section class="admin-card">
+          <div class="admin-card-body">
+            <div class="admin-card-meta">Equipes cadastradas</div>
+            <div class="admin-stat-value">{{ teams|length }}</div>
+            <div class="admin-card-meta">{{ inactive_teams|length }} inativa(s)</div>
+          </div>
+        </section>
+        <section class="admin-card">
+          <div class="admin-card-body">
+            <div class="admin-card-meta">Usuarios em equipes</div>
+            <div class="admin-stat-value">{{ total_users.value }}</div>
+            <div class="admin-card-meta">Vinculos administrativos</div>
+          </div>
+        </section>
+        <section class="admin-card">
+          <div class="admin-card-body">
+            <div class="admin-card-meta">Clientes nas equipes</div>
+            <div class="admin-stat-value">{{ total_leads.value }}</div>
+            <div class="admin-card-meta">Base operacional ativa</div>
+          </div>
+        </section>
+      </div>
+
+      <section class="admin-table-card">
+        <div class="admin-table-toolbar">
+          <div>
+            <div class="admin-card-title">{{ teams|length }} equipes</div>
+            <div class="admin-card-meta">Renomear uma equipe atualiza usuarios e clientes vinculados ao nome antigo.</div>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Equipe</th>
+                <th>Franquia</th>
+                <th>Usuarios</th>
+                <th>Clientes</th>
+                <th>Reversao</th>
+                <th>Status</th>
+                <th class="text-end">Acoes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for team in teams %}
+                {% set usage = team_usage_counts(team) %}
+                <tr class="{% if not team.active %}opacity-75{% endif %}">
+                  <td>
+                    <div class="fw-semibold">{{ team.name }}</div>
+                    <div class="text-muted small">{{ team.description or 'Sem descricao' }}</div>
+                  </td>
+                  <td>{{ team.franchise.name if team.franchise else 'Matriz' }}</td>
+                  <td>
+                    <span class="badge rounded-pill text-bg-primary">{{ usage.users }}</span>
+                  </td>
+                  <td>
+                    <span class="badge rounded-pill text-bg-secondary">{{ usage.leads }}</span>
+                  </td>
+                  <td>
+                    {% set reversal_config = team_reversal_configs.get(team.id) %}
+                    {% if reversal_config and reversal_config.enabled %}
+                      <div class="fw-semibold small">{{ reversal_distribution_mode_label(reversal_config.distribution_mode) }}</div>
+                    {% else %}
+                      <span class="text-muted small">Desativada</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if team.active %}
+                      <span class="badge rounded-pill text-bg-success">Ativa</span>
+                    {% else %}
+                      <span class="badge rounded-pill text-bg-secondary">Inativa</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-end">
+                    <button class="admin-action-button" type="button" data-dialog-open="team-dialog-{{ team.id }}" title="Editar equipe">Editar</button>
+                  </td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="7" class="text-center text-muted py-4">Nenhuma equipe cadastrada.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <dialog id="team-create-dialog" class="crm-dialog" {% if modal_should_open('team-create-dialog') %}data-modal-auto-open="1"{% endif %}>
+        <div class="crm-dialog-header">
+          <div>
+            <h2 class="h5 mb-1">Nova equipe</h2>
+            <div class="text-muted small">Crie uma equipe e vincule a uma franquia.</div>
+          </div>
+          <button class="crm-dialog-close" type="button" data-dialog-close aria-label="Fechar">x</button>
+        </div>
+        <form method="post" action="{{ url_for('create_team') }}" class="crm-dialog-body">
+          {% include "_csrf_token.html" %}
+          <input type="hidden" name="next" value="{{ request.full_path }}">
+          <div class="row g-3">
+            <div class="col-12 col-md-7">
+              <label class="form-label" for="new-team-name">Nome</label>
+              <input id="new-team-name" name="name" class="form-control" value="{{ modal_value('team-create-dialog', 'name') }}" required>
+            </div>
+            <div class="col-12 col-md-5">
+              <label class="form-label" for="new-team-franchise">Franquia</label>
+              <select id="new-team-franchise" name="franchise_id" class="form-select">
+                {% for franchise in franchises %}
+                  <option value="{{ franchise.id }}" {% if modal_selected('team-create-dialog', 'franchise_id', franchise.id) %}selected{% endif %} {% if not franchise.active %}disabled{% endif %}>{{ franchise.name }}{% if not franchise.active %} (inativa){% endif %}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="new-team-description">Descricao</label>
+              <input id="new-team-description" name="description" class="form-control" value="{{ modal_value('team-create-dialog', 'description') }}" placeholder="Opcional">
+            </div>
+            <div class="col-12">
+              <section class="admin-soft-panel p-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                  <div>
+                    <div class="admin-card-title">Reversao da equipe</div>
+                    <div class="admin-card-meta">Escolha como essa equipe vai distribuir reversoes.</div>
+                  </div>
+                  <div class="form-check form-switch">
+                    <input id="new-team-reversal-enabled" name="reversal_enabled" type="checkbox" class="form-check-input" {% if modal_checked('team-create-dialog', 'reversal_enabled', true) %}checked{% endif %}>
+                    <label class="form-check-label" for="new-team-reversal-enabled">Ativa</label>
+                  </div>
+                </div>
+                <label class="form-label" for="new-team-reversal-mode">Distribuicao</label>
+                <select id="new-team-reversal-mode" name="reversal_distribution_mode" class="form-select">
+                  {% for mode in reversal_distribution_modes %}
+                    <option value="{{ mode.value }}" {% if modal_selected('team-create-dialog', 'reversal_distribution_mode', mode.value, mode.value == 'manual') %}selected{% endif %}>{{ mode.label }}</option>
+                  {% endfor %}
+                </select>
+              </section>
+            </div>
+          </div>
+          <div class="d-flex justify-content-end gap-2 mt-4">
+            <button class="btn btn-outline-secondary" type="button" data-dialog-close>Cancelar</button>
+            <button class="btn btn-primary" type="submit">Criar equipe</button>
+          </div>
+        </form>
+      </dialog>
+
+      {% for team in teams %}
+        {% set usage = team_usage_counts(team) %}
+        {% set members = team_members_by_team.get(team.id, []) %}
+        {% set available_users = available_users_by_team.get(team.id, []) %}
+        {% set reversal_config = team_reversal_configs.get(team.id) %}
+        {% set team_modal_id = 'team-dialog-' ~ team.id %}
+        <dialog id="{{ team_modal_id }}" class="crm-dialog crm-dialog-wide" {% if modal_should_open(team_modal_id) %}data-modal-auto-open="1"{% endif %}>
+          <div class="crm-dialog-header">
+            <div>
+              <h2 class="h5 mb-1">Editar equipe</h2>
+              <div class="text-muted small">{{ team.name }} · {{ usage.users }} usuario(s) · {{ usage.leads }} cliente(s)</div>
+            </div>
+            <button class="crm-dialog-close" type="button" data-dialog-close aria-label="Fechar">x</button>
+          </div>
+          <div class="crm-dialog-body">
+            <form method="post" action="{{ url_for('update_team', team_id=team.id) }}">
+              {% include "_csrf_token.html" %}
+              <input type="hidden" name="next" value="{{ request.full_path }}">
+              <div class="row g-3">
+                <div class="col-12 col-md-7">
+                  <label class="form-label" for="team-name-{{ team.id }}">Nome</label>
+                  <input id="team-name-{{ team.id }}" name="name" class="form-control" value="{{ modal_value(team_modal_id, 'name', team.name) }}" required>
+                </div>
+                <div class="col-12 col-md-5">
+                  <label class="form-label" for="team-franchise-{{ team.id }}">Franquia</label>
+                  <select id="team-franchise-{{ team.id }}" name="franchise_id" class="form-select">
+                    {% for franchise in franchises %}
+                      <option value="{{ franchise.id }}" {% if modal_selected(team_modal_id, 'franchise_id', franchise.id, team.franchise_id == franchise.id) %}selected{% endif %} {% if not franchise.active %}disabled{% endif %}>{{ franchise.name }}{% if not franchise.active %} (inativa){% endif %}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="col-12">
+                  <label class="form-label" for="team-description-{{ team.id }}">Descricao</label>
+                  <input id="team-description-{{ team.id }}" name="description" class="form-control" value="{{ modal_value(team_modal_id, 'description', team.description or '') }}">
+                </div>
+                <div class="col-12">
+                  <section class="admin-soft-panel p-3">
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                      <div>
+                        <div class="admin-card-title">Reversao da equipe</div>
+                        <div class="admin-card-meta">Define se o cliente entra no sorteio automatico ou aguarda o supervisor escolher o reversor.</div>
+                      </div>
+                      <div class="form-check form-switch">
+                        <input
+                          id="team-reversal-enabled-{{ team.id }}"
+                          name="reversal_enabled"
+                          type="checkbox"
+                          class="form-check-input"
+                          {% if modal_checked(team_modal_id, 'reversal_enabled', reversal_config.enabled if reversal_config else true) %}checked{% endif %}
+                        >
+                        <label class="form-check-label" for="team-reversal-enabled-{{ team.id }}">Ativa</label>
+                      </div>
+                    </div>
+                    <label class="form-label" for="team-reversal-mode-{{ team.id }}">Distribuicao</label>
+                    <select id="team-reversal-mode-{{ team.id }}" name="reversal_distribution_mode" class="form-select">
+                      {% for mode in reversal_distribution_modes %}
+                        <option
+                          value="{{ mode.value }}"
+                          {% if modal_selected(team_modal_id, 'reversal_distribution_mode', mode.value, reversal_config and reversal_config.distribution_mode == mode.value) %}selected{% endif %}
+                        >
+                          {{ mode.label }}
+                        </option>
+                      {% endfor %}
+                    </select>
+                  </section>
+                </div>
+                <div class="col-12">
+                  <div class="form-check form-switch">
+                    <input id="team-active-{{ team.id }}" name="active" type="checkbox" class="form-check-input" {% if modal_checked(team_modal_id, 'active', team.active) %}checked{% endif %}>
+                    <label class="form-check-label" for="team-active-{{ team.id }}">Equipe ativa</label>
+                  </div>
+                </div>
+              </div>
+              <div class="d-flex flex-wrap justify-content-between gap-2 mt-4">
+                <div class="d-flex flex-wrap gap-2">
+                  {% if team.active %}
+                    <button
+                      class="btn btn-outline-warning"
+                      type="submit"
+                      formaction="{{ url_for('deactivate_team', team_id=team.id) }}"
+                    >Desativar</button>
+                  {% endif %}
+                  <button
+                    class="btn btn-outline-danger"
+                    type="submit"
+                    formaction="{{ url_for('delete_team', team_id=team.id) }}"
+                    onclick="return confirm('Excluir esta equipe? Se estiver em uso, o sistema vai bloquear.')"
+                  >Excluir</button>
+                </div>
+                <div class="d-flex gap-2">
+                  <button class="btn btn-outline-secondary" type="button" data-dialog-close>Cancelar</button>
+                  <button class="btn btn-primary" type="submit">Salvar equipe</button>
+                </div>
+              </div>
+            </form>
+
+            <section class="admin-soft-panel mt-4">
+              <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                <div>
+                  <div class="admin-card-title">Membros da equipe</div>
+                  <div class="admin-card-meta">Adicionar aqui transfere o usuario para esta equipe e sincroniza a franquia da equipe.</div>
+                </div>
+                <span class="badge rounded-pill text-bg-primary">{{ members|length }} membro(s)</span>
+              </div>
+
+              <form method="post" action="{{ url_for('add_team_members', team_id=team.id) }}" class="row g-2 align-items-end mb-3">
+                {% include "_csrf_token.html" %}
+                <input type="hidden" name="next" value="{{ request.full_path }}">
+                <div class="col-12 col-lg">
+                  <label class="form-label" for="team-add-users-{{ team.id }}">Adicionar ou transferir usuarios</label>
+                  <select id="team-add-users-{{ team.id }}" name="user_ids" class="form-select" multiple size="4" {% if not available_users %}disabled{% endif %}>
+                      {% for user in available_users %}
+                      <option value="{{ user.id }}" {% if modal_selected(team_modal_id, 'user_ids', user.id) %}selected{% endif %}>
+                        {{ user.name }}{% if user.team %} · {{ user.team }}{% else %} · sem equipe{% endif %}{% if user.role_profile %} · {{ user.role_profile.name }}{% else %} · {{ user.role }}{% endif %}
+                      </option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="col-12 col-lg-auto">
+                  <button class="btn btn-primary w-100" type="submit" {% if not available_users %}disabled{% endif %}>Adicionar</button>
+                </div>
+              </form>
+
+              <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th>Usuario</th>
+                      <th>Cargo</th>
+                      <th>Nome nos clientes</th>
+                      <th>Clientes</th>
+                      <th>Status</th>
+                      <th class="text-end">Acoes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for member in members %}
+                      {% set member_lead_name = lead_assignment_name(member) %}
+                      {% set member_leads = lead_counts_by_consultor.get(member_lead_name, 0) %}
+                      <tr class="{% if not member.active %}opacity-75{% endif %}">
+                        <td>
+                          <div class="d-flex align-items-center gap-2">
+                            <span class="admin-avatar" aria-hidden="true">{{ member.name[:1] }}</span>
+                            <div class="min-w-0">
+                              <div class="fw-semibold text-truncate">{{ member.name }}</div>
+                              <div class="text-muted small text-truncate">{{ member.email or member.username }}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <div class="fw-semibold">{{ member.role_profile.name if member.role_profile else 'Personalizado' }}</div>
+                          <div class="text-muted small">{{ member.role }}</div>
+                        </td>
+                        <td>{{ member_lead_name }}</td>
+                        <td>
+                          <span class="badge rounded-pill {% if member_leads %}text-bg-success{% else %}text-bg-secondary{% endif %}">{{ member_leads }}</span>
+                        </td>
+                        <td>
+                          {% if member.active %}
+                            <span class="badge rounded-pill text-bg-success">Ativo</span>
+                          {% else %}
+                            <span class="badge rounded-pill text-bg-secondary">Desativado</span>
+                          {% endif %}
+                        </td>
+                        <td class="text-end">
+                          {% if member.id == current_user.id %}
+                            <span class="text-muted small">Voce</span>
+                          {% else %}
+                            <form method="post" action="{{ url_for('remove_team_member', team_id=team.id, user_id=member.id) }}">
+                              {% include "_csrf_token.html" %}
+                              <input type="hidden" name="next" value="{{ request.full_path }}">
+                              <button class="admin-action-button" type="submit" onclick="return confirm('Remover {{ member.name }} desta equipe?')">Remover</button>
+                            </form>
+                          {% endif %}
+                        </td>
+                      </tr>
+                    {% else %}
+                      <tr>
+                        <td colspan="6" class="text-center text-muted py-4">Nenhum usuario vinculado a esta equipe.</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </dialog>
+      {% endfor %}
+    </main>
+
+    <script>
+      document.querySelectorAll("[data-dialog-open]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const dialog = document.getElementById(button.dataset.dialogOpen);
+          if (dialog) dialog.showModal();
+        });
+      });
+      document.querySelectorAll("[data-dialog-close]").forEach((button) => {
+        button.addEventListener("click", () => button.closest("dialog")?.close());
+      });
+      document.querySelectorAll('dialog[data-modal-auto-open="1"]').forEach((dialog) => {
+        dialog.showModal();
+      });
+    </script>
+  </body>
+</html>
