@@ -6,6 +6,28 @@ Código de uma aplicação web para gestão de clientes, equipes e fluxos operac
 
 [Aplicação](app.py) · [Modelos](models.py) · [Testes](tests/) · [Arquitetura](ARCHITECTURE.md)
 
+**Estado:** código público para demonstração local, com testes automatizados.
+
+![CRM interno com clientes fictícios — desktop](screenshots/crm-workflows.jpg)
+
+Fluxos de clientes em uma execução local. Todos os nomes, documentos, contatos e cadastros destas capturas são fictícios.
+
+<details>
+<summary>Ver no celular</summary>
+
+Ficha de um cliente de demonstração, com etapas, alertas e tarefas.
+
+<img src="screenshots/crm-mobile-profile.jpg" alt="CRM interno com clientes fictícios — celular" width="320">
+
+</details>
+
+<details>
+<summary>Ver carteira de clientes</summary>
+
+![Carteira com 22 clientes fictícios](screenshots/crm-desktop.jpg)
+
+</details>
+
 ## Funcionalidades
 
 - Login local e integração opcional com Google OAuth.
@@ -67,7 +89,7 @@ Esta versão contém o código da aplicação principal. Os cadastros iniciais d
 
 Bancos, planilhas, backups, logs, capturas do ambiente real, credenciais e arquivos de implantação não fazem parte desta publicação. A prévia de compatibilidade que depende de snapshots de produção também foi excluída.
 
-As imagens antigas da pasta `screenshots/` são mockups ilustrativos com dados fictícios, e não capturas da operação.
+As novas imagens JPG da pasta `screenshots/` são capturas reais da aplicação executada localmente com dados sintéticos. Os arquivos SVG com sufixo `mockup` são ilustrações antigas; nenhum deles representa dados da operação.
 
 ## Documentação e limites
 

@@ -1,6 +1,5 @@
-# Screenshots
+# Capturas da interface
 
-This folder contains illustrative mockups only.
+As imagens `crm-*.jpg` foram capturadas em execução local da aplicação pública, em desktop e celular. A carteira, os documentos, os contatos, as pessoas e as tarefas são exemplos sintéticos. O banco usado nas capturas é descartável e não acompanha a publicação.
 
-The images use fictitious names, masked identifiers and generic operational labels. They are not real production screenshots.
-
+Os arquivos `*-mockup.svg` são ilustrações históricas, e não capturas do sistema. Estas imagens não equivalem a uma homologação de produção.
