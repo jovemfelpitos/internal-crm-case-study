@@ -1,0 +1,808 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mini CRM - Apoio</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}">
+    {% include "_theme_head.html" %}
+    <style>
+      body {
+        font-family: "DM Sans", "Nunito Sans", "Open Sans", Arial, sans-serif;
+      }
+
+      .support-shell {
+        width: auto;
+        max-width: none;
+      }
+
+      .support-header,
+      .support-filter-panel,
+      .support-column {
+        border: 1px solid var(--crm-border);
+        border-radius: 8px;
+        background: var(--crm-surface);
+        box-shadow: var(--crm-shadow);
+      }
+
+      .support-header {
+        padding: 1.05rem;
+      }
+
+      .support-filter-panel {
+        padding: .85rem;
+      }
+
+      .support-notification-panel {
+        display: grid;
+        gap: .55rem;
+        margin-bottom: .85rem;
+      }
+
+      .support-notification {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: .65rem;
+        align-items: center;
+        border: 1px solid var(--crm-border);
+        border-left: 3px solid var(--crm-primary);
+        border-radius: 8px;
+        padding: .65rem .72rem;
+        background: var(--crm-surface);
+        box-shadow: var(--crm-shadow-soft);
+      }
+
+      .support-notification-critical {
+        border-left-color: #dc2626;
+      }
+
+      .support-notification-warning {
+        border-left-color: #f59e0b;
+      }
+
+      .support-notification-title {
+        color: var(--crm-text);
+        font-size: .82rem;
+        font-weight: 820;
+      }
+
+      .support-notification-message {
+        color: var(--crm-muted);
+        font-size: .74rem;
+        line-height: 1.35;
+      }
+
+      .support-filters {
+        display: grid;
+        grid-template-columns: minmax(220px, 1fr) auto auto;
+        gap: .65rem;
+        align-items: end;
+      }
+
+      .support-board {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(220px, 304px));
+        gap: .75rem;
+        align-items: start;
+      }
+
+      .support-column {
+        display: grid;
+        grid-template-rows: auto 1fr;
+        min-width: 0;
+        min-height: 320px;
+        max-height: calc(100vh - 245px);
+        overflow: hidden;
+      }
+
+      .support-column-head {
+        display: grid;
+        gap: .75rem;
+        padding: .85rem .85rem .65rem;
+        border-bottom: 1px solid var(--crm-border);
+        background: var(--crm-surface);
+        z-index: 6;
+      }
+
+      .support-column-heading {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: .65rem;
+        min-width: 0;
+      }
+
+      .support-column-summary {
+        min-width: 0;
+      }
+
+      .support-column-title-line {
+        display: flex;
+        align-items: center;
+        gap: .45rem;
+        min-width: 0;
+      }
+
+      .support-column-title {
+        margin: 0;
+        color: var(--crm-text);
+        font-size: .92rem;
+        font-weight: 900;
+      }
+
+      .support-column-description {
+        margin-top: .12rem;
+        color: var(--crm-muted);
+        font-size: .76rem;
+        line-height: 1.25;
+      }
+
+      .support-column-count {
+        display: inline-grid;
+        min-width: 26px;
+        min-height: 24px;
+        place-items: center;
+        border-radius: 999px;
+        background: var(--crm-primary-soft);
+        color: var(--crm-primary);
+        font-size: .75rem;
+        font-weight: 900;
+      }
+
+      .support-column-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        flex: 0 0 auto;
+        border: 1px solid var(--crm-border);
+        border-radius: 8px;
+        background: var(--crm-surface-muted);
+        color: var(--crm-primary);
+        font-size: 1rem;
+        font-weight: 850;
+        line-height: 1;
+        cursor: pointer;
+      }
+
+      .support-column-toggle:hover,
+      .support-column-toggle:focus-visible {
+        border-color: var(--crm-primary);
+        background: var(--crm-primary-soft);
+        color: var(--crm-primary-strong);
+        outline: none;
+      }
+
+      .support-column-stats {
+        display: grid;
+        gap: .34rem;
+        min-width: 0;
+        margin-top: .02rem;
+        padding: .5rem .55rem;
+        border: 1px solid var(--crm-border);
+        border-radius: 7px;
+        background: color-mix(in srgb, var(--crm-surface-muted) 78%, var(--crm-surface));
+      }
+
+      .support-column-stats[hidden] {
+        display: none;
+      }
+
+      .support-column-stat {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: .65rem;
+        width: 100%;
+        min-width: 0;
+        border: 0;
+        border-radius: 5px;
+        padding: .12rem .16rem;
+        background: transparent;
+        color: var(--crm-muted);
+        font-size: .72rem;
+        line-height: 1.2;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .support-column-stat:hover,
+      .support-column-stat.is-active {
+        background: var(--crm-primary-soft);
+        color: var(--crm-text);
+      }
+
+      .support-column-stat span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .support-column-stat strong {
+        flex: 0 0 auto;
+        min-width: 1.3rem;
+        text-align: right;
+        color: var(--crm-text);
+        font-size: .74rem;
+        font-weight: 820;
+      }
+
+      .support-column-stat-danger strong {
+        color: #dc2626;
+      }
+
+      .support-column-stat-warning strong {
+        color: #d97706;
+      }
+
+      .support-column-stat-info strong {
+        color: var(--crm-primary);
+      }
+
+      html[data-theme="dark"] .support-column-stat-danger strong {
+        color: #fca5a5;
+      }
+
+      .support-column-body {
+        display: grid;
+        align-content: start;
+        gap: .55rem;
+        padding: .62rem;
+        overflow-y: auto;
+      }
+
+      .support-column.is-stats-open .support-column-body {
+        padding-top: .82rem;
+      }
+
+      .support-card.is-column-filter-hidden,
+      .support-column-filter-empty[hidden] {
+        display: none;
+      }
+
+      .support-card {
+        display: grid;
+        gap: .55rem;
+        min-width: 0;
+        padding: .62rem;
+        border: 1px solid var(--crm-border);
+        border-radius: 8px;
+        background: var(--crm-surface);
+        box-shadow: 0 8px 18px rgba(15, 23, 42, .05);
+      }
+
+      .support-card-state-overdue {
+        border-color: rgba(220, 38, 38, .42);
+        box-shadow: 0 0 0 1px rgba(220, 38, 38, .08), 0 12px 26px rgba(220, 38, 38, .10);
+      }
+
+      .support-card-state-returned {
+        opacity: .68;
+        background: color-mix(in srgb, var(--crm-surface-muted) 68%, var(--crm-surface));
+      }
+
+      .support-card-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: .5rem;
+        min-width: 0;
+      }
+
+      .support-title {
+        display: inline-block;
+        max-width: 100%;
+        color: var(--crm-text);
+        font-size: .9rem;
+        font-weight: 900;
+        line-height: 1.12;
+        text-decoration: none;
+        overflow-wrap: anywhere;
+      }
+
+      .support-title:hover {
+        color: var(--crm-primary);
+      }
+
+      .support-cpf {
+        margin-top: .12rem;
+        color: var(--crm-muted);
+        font-size: .71rem;
+        font-weight: 700;
+      }
+
+      .support-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        min-height: 21px;
+        max-width: 7.5rem;
+        padding: 0 .45rem;
+        border: 1px solid var(--crm-border);
+        border-radius: 999px;
+        background: var(--crm-surface-muted);
+        color: var(--crm-muted);
+        font-size: .64rem;
+        font-weight: 900;
+        line-height: 1.05;
+        text-align: center;
+        white-space: normal;
+      }
+
+      .support-badge-overdue,
+      .support-badge-critical {
+        border-color: rgba(220, 38, 38, .30);
+        background: rgba(220, 38, 38, .10);
+        color: #b91c1c;
+      }
+
+      .support-badge-returned,
+      .support-badge-warning {
+        border-color: rgba(245, 158, 11, .34);
+        background: rgba(245, 158, 11, .12);
+        color: #92400e;
+      }
+
+      .support-badge-active,
+      .support-badge-info {
+        border-color: rgba(37, 99, 235, .28);
+        background: var(--crm-primary-soft);
+        color: var(--crm-primary);
+      }
+
+      .support-badge-pending {
+        border-color: rgba(100, 116, 139, .28);
+        color: var(--crm-muted);
+      }
+
+      html[data-theme="dark"] .support-badge-overdue,
+      html[data-theme="dark"] .support-badge-critical {
+        color: #fca5a5;
+      }
+
+      html[data-theme="dark"] .support-badge-returned,
+      html[data-theme="dark"] .support-badge-warning {
+        color: #fbbf24;
+      }
+
+      .support-info-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: .4rem;
+      }
+
+      .support-info-item {
+        min-width: 0;
+      }
+
+      .support-info-label {
+        display: block;
+        color: var(--crm-muted);
+        font-size: .61rem;
+        font-weight: 850;
+        letter-spacing: .03em;
+        text-transform: uppercase;
+      }
+
+      .support-info-value {
+        display: block;
+        margin-top: .08rem;
+        color: var(--crm-text);
+        font-size: .78rem;
+        font-weight: 820;
+        overflow-wrap: anywhere;
+      }
+
+      .support-info-muted {
+        color: var(--crm-muted);
+      }
+
+      .support-note-field {
+        min-height: 56px;
+        resize: vertical;
+      }
+
+      .support-card .form-label {
+        margin-bottom: .25rem;
+        font-size: .7rem;
+        line-height: 1.15;
+      }
+
+      .support-note-error {
+        display: none;
+        margin-top: .28rem;
+        color: #dc2626;
+        font-size: .75rem;
+        font-weight: 800;
+      }
+
+      .support-note-error.is-visible {
+        display: block;
+      }
+
+      .support-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .35rem;
+      }
+
+      .support-actions form {
+        margin: 0;
+      }
+
+      .support-actions .btn {
+        padding: .24rem .5rem;
+        font-size: .72rem;
+        font-weight: 800;
+      }
+
+      .support-empty-column,
+      .support-empty {
+        border: 1px dashed var(--crm-border);
+        border-radius: 8px;
+        padding: 1rem;
+        color: var(--crm-muted);
+        background: var(--crm-surface-muted);
+        text-align: center;
+        font-size: .84rem;
+      }
+
+      .support-empty {
+        padding: 1.4rem;
+      }
+
+      @media (max-width: 1180px) {
+        .support-board {
+          grid-template-columns: repeat(2, minmax(220px, 1fr));
+        }
+
+        .support-column {
+          max-height: none;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .support-filters {
+          grid-template-columns: 1fr;
+        }
+
+        .support-board {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    {% include "_app_sidebar.html" %}
+
+    <main class="container-fluid support-shell py-4 app-main">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <section class="support-header mb-3">
+        <div class="d-flex flex-wrap justify-content-between align-items-end gap-3">
+          <div>
+            <p class="text-muted small text-uppercase mb-1">Operacao</p>
+            <h1 class="h3 mb-1">Fila de apoio comercial</h1>
+            <div class="text-muted">Kanban dos clientes que dependem do apoio antes de seguir etapa.</div>
+          </div>
+          <span class="support-badge support-badge-active">{{ tasks|length }} de {{ total_tasks }} tarefa(s)</span>
+        </div>
+      </section>
+
+      <section class="support-filter-panel mb-3">
+        <form class="support-filters" method="get" action="{{ url_for('support_queue') }}">
+          <div>
+            <label class="form-label small text-muted" for="support-q">Buscar</label>
+            <input
+              id="support-q"
+              class="form-control"
+              type="search"
+              name="q"
+              value="{{ filters.q or '' }}"
+              placeholder="Nome, CPF, consultor ou tarefa"
+            >
+          </div>
+          <button class="btn btn-primary" type="submit">Filtrar</button>
+          <a class="btn btn-outline-secondary" href="{{ url_for('support_queue') }}">Limpar</a>
+        </form>
+      </section>
+
+      {% if support_notifications %}
+        <section class="support-notification-panel" aria-label="Alertas do apoio">
+          {% for notification in support_notifications %}
+            <article class="support-notification support-notification-{{ notification.severity }}">
+              <div>
+                <div class="support-notification-title">{{ notification.title }}</div>
+                <div class="support-notification-message">
+                  {{ notification.message }}
+                  <span class="text-muted">- {{ notification.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
+                </div>
+              </div>
+              <form method="post" action="{{ url_for('read_support_notification', notification_id=notification.id) }}">
+                {% include "_csrf_token.html" %}
+                <input type="hidden" name="next" value="{{ request.full_path }}">
+                <button class="btn btn-outline-secondary btn-sm" type="submit">Ok</button>
+              </form>
+            </article>
+          {% endfor %}
+        </section>
+      {% endif %}
+
+      {% if tasks %}
+        <section class="support-board" aria-label="Fila de apoio por status">
+          {% for column in columns %}
+            <section class="support-column support-column-{{ column.key }}">
+              <header class="support-column-head">
+                <div class="support-column-heading">
+                  <div class="support-column-summary">
+                    <div class="support-column-title-line">
+                      <h2 class="support-column-title">{{ column.label }}</h2>
+                      <span class="support-column-count">{{ column.count }}</span>
+                    </div>
+                    <div class="support-column-description">{{ column.description }}</div>
+                  </div>
+                  <button
+                    class="support-column-toggle"
+                    type="button"
+                    data-support-column-stats-toggle
+                    aria-expanded="false"
+                    aria-controls="support-column-stats-{{ column.key }}"
+                    aria-label="Mostrar resumo da coluna {{ column.label }}"
+                  >
+                    +
+                  </button>
+                </div>
+                <div class="support-column-stats" id="support-column-stats-{{ column.key }}" hidden>
+                  {% for stat in column.stats %}
+                    <button
+                      class="support-column-stat support-column-stat-{{ stat.tone }}"
+                      type="button"
+                      data-support-column-filter="{{ stat.filter }}"
+                    >
+                      <span>{{ stat.label }}</span>
+                      <strong>{{ stat.value if stat.value else '-' }}</strong>
+                    </button>
+                  {% endfor %}
+                </div>
+              </header>
+
+              <div class="support-column-body">
+                {% if column.tasks %}
+                  {% for task in column.tasks %}
+                    {% set lead = task.lead %}
+                    {% set alert = support_alerts.get(task.id) %}
+                    {% set state = support_states.get(task.id) %}
+                    {% set deadline = support_deadlines.get(task.id) %}
+                    {% set can_finish = support_task_can_be_completed_by(current_user, task) and task.assigned_user and not task.support_returned_at %}
+                    {% set can_return = support_actor_for_workflow(current_user, task) %}
+                    {% set can_send_support = can_send_support_for_workflow(current_user, task) %}
+                    {% set support_filter_tags = 'all ' ~ state %}
+                    {% if not task.assigned_user_id and not task.support_returned_at %}
+                      {% set support_filter_tags = support_filter_tags ~ ' unassigned' %}
+                    {% endif %}
+
+                    <article class="support-card support-card-state-{{ state }}" data-support-card data-column-filter-tags="{{ support_filter_tags }}">
+                      <div class="support-card-head">
+                        <div>
+                          <a class="support-title" href="{{ url_for('lead_detail', lead_id=lead.id, back=request.full_path) }}">
+                            {{ lead.nome_cliente }}
+                          </a>
+                          <div class="support-cpf">CPF {{ lead.cpf }}</div>
+                        </div>
+                        <span class="support-badge support-badge-{{ state }}">
+                          {{ support_task_status_label(task, alert) }}
+                        </span>
+                      </div>
+
+                      <div class="support-info-grid">
+                        <div class="support-info-item">
+                          <span class="support-info-label">Tarefa</span>
+                          <span class="support-info-value">{{ task.current_stage.name if task.current_stage else '-' }}</span>
+                        </div>
+
+                        <div class="support-info-item">
+                          <span class="support-info-label">Prazo</span>
+                          {% if task.support_returned_at %}
+                            <span class="support-info-value support-info-muted">
+                              Devolvido em {{ task.support_returned_at.strftime('%d/%m/%Y %H:%M') }}
+                            </span>
+                          {% elif deadline %}
+                            {% if deadline.is_overdue %}
+                              <span class="support-info-value text-danger">
+                                Venceu ha {{ deadline.overdue_hours }}h
+                              </span>
+                            {% else %}
+                              <span class="support-info-value">
+                                Ate {{ deadline.at.strftime('%d/%m/%Y %H:%M') }}
+                              </span>
+                            {% endif %}
+                          {% else %}
+                            <span class="support-info-value support-info-muted">Sem prazo definido</span>
+                          {% endif %}
+                        </div>
+                      </div>
+
+                      {% if task.support_returned_at %}
+                        <div class="support-info-item">
+                          <span class="support-info-label">Motivo informado</span>
+                          <span class="support-info-value">{{ task.support_return_reason or 'Sem motivo registrado' }}</span>
+                        </div>
+                      {% endif %}
+
+                      {% if can_finish or can_return %}
+                        <div>
+                          <label class="form-label small text-muted" for="support-note-{{ task.id }}">
+                            O que foi feito ou por que nao foi feito
+                          </label>
+                          <textarea
+                            id="support-note-{{ task.id }}"
+                            class="form-control form-control-sm support-note-field"
+                            rows="2"
+                            placeholder="Descreva a atuacao do apoio"
+                            data-support-note-source
+                          ></textarea>
+                          <div class="support-note-error" data-support-note-error>
+                            Informe o que foi feito ou por que nao foi feito.
+                          </div>
+                        </div>
+                      {% endif %}
+
+                      <div class="support-actions">
+                        {% if can_finish %}
+                          <form
+                            method="post"
+                            action="{{ url_for('complete_lead_workflow_support', lead_workflow_id=task.id) }}"
+                            data-support-note-form
+                            data-support-requires-note="true"
+                          >
+                            {% include "_csrf_token.html" %}
+                            <input type="hidden" name="next" value="{{ request.full_path }}">
+                            <input type="hidden" name="support_note" data-support-note-target>
+                            <button class="btn btn-success btn-sm" type="submit">Concluir apoio</button>
+                          </form>
+                        {% endif %}
+
+                        {% if can_return %}
+                          <form
+                            method="post"
+                            action="{{ url_for('return_lead_workflow_support', lead_workflow_id=task.id) }}"
+                            data-support-note-form
+                            data-support-requires-note="true"
+                          >
+                            {% include "_csrf_token.html" %}
+                            <input type="hidden" name="next" value="{{ request.full_path }}">
+                            <input type="hidden" name="return_reason" data-support-note-target>
+                            <button class="btn btn-outline-warning btn-sm" type="submit">Devolver</button>
+                          </form>
+                        {% endif %}
+
+                        {% if can_send_support %}
+                          <form method="post" action="{{ url_for('assign_lead_workflow_support', lead_workflow_id=task.id) }}">
+                            {% include "_csrf_token.html" %}
+                            <input type="hidden" name="next" value="{{ request.full_path }}">
+                            <button class="btn btn-outline-primary btn-sm" type="submit">
+                              {% if task.support_returned_at %}
+                                Reenviar ao apoio
+                              {% elif task.assigned_user %}
+                                Redistribuir apoio
+                              {% else %}
+                                Enviar ao apoio
+                              {% endif %}
+                            </button>
+                          </form>
+                        {% endif %}
+                      </div>
+                    </article>
+                  {% endfor %}
+                {% else %}
+                  <div class="support-empty-column">Nenhum cliente neste status.</div>
+                {% endif %}
+                <div class="support-empty-column support-column-filter-empty" hidden>Nenhum cliente neste filtro.</div>
+              </div>
+            </section>
+          {% endfor %}
+        </section>
+      {% else %}
+        <section class="support-empty">
+          Nenhuma tarefa de apoio encontrada para esses filtros.
+        </section>
+      {% endif %}
+    </main>
+
+    <script>
+      (() => {
+        document.querySelectorAll("[data-support-column-stats-toggle]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const stats = document.getElementById(button.getAttribute("aria-controls"));
+            if (!stats) {
+              return;
+            }
+            const isExpanded = button.getAttribute("aria-expanded") === "true";
+            button.setAttribute("aria-expanded", String(!isExpanded));
+            stats.hidden = isExpanded;
+            button.textContent = isExpanded ? "+" : "-";
+            button.closest(".support-column")?.classList.toggle("is-stats-open", !isExpanded);
+          });
+        });
+
+        const supportBoard = document.querySelector(".support-board");
+        const supportColumns = supportBoard ? Array.from(supportBoard.querySelectorAll(".support-column")) : [];
+        const supportFilterButtons = supportBoard ? Array.from(supportBoard.querySelectorAll("[data-support-column-filter]")) : [];
+
+        const applySupportBoardFilter = (filter) => {
+          const activeFilter = filter && filter !== "all" ? filter : "all";
+          supportColumns.forEach((column) => {
+            const count = column.querySelector(".support-column-count");
+            const cards = Array.from(column.querySelectorAll("[data-support-card]"));
+            const empty = column.querySelector(".support-column-filter-empty");
+            const total = cards.length;
+            let visible = 0;
+            cards.forEach((card) => {
+              const tags = (card.dataset.columnFilterTags || "all").split(/\s+/);
+              const show = activeFilter === "all" || tags.includes(activeFilter);
+              card.classList.toggle("is-column-filter-hidden", !show);
+              if (show) visible += 1;
+            });
+            if (count) {
+              count.textContent = activeFilter === "all" ? total : visible;
+            }
+            if (empty) {
+              empty.hidden = activeFilter === "all" || visible > 0;
+            }
+          });
+          supportFilterButtons.forEach((item) => {
+            item.classList.toggle("is-active", item.dataset.supportColumnFilter === activeFilter);
+          });
+        };
+
+        supportFilterButtons.forEach((button) => {
+          button.addEventListener("click", () => {
+            const filter = button.classList.contains("is-active") ? "all" : button.dataset.supportColumnFilter;
+            applySupportBoardFilter(filter);
+          });
+        });
+
+        document.querySelectorAll("[data-support-note-form]").forEach((form) => {
+          form.addEventListener("submit", (event) => {
+            const card = form.closest("[data-support-card]");
+            const source = card?.querySelector("[data-support-note-source]");
+            const target = form.querySelector("[data-support-note-target]");
+            const error = card?.querySelector("[data-support-note-error]");
+            const value = (source?.value || "").trim();
+
+            if (target) {
+              target.value = value;
+            }
+
+            if (form.dataset.supportRequiresNote === "true" && !value) {
+              event.preventDefault();
+              source?.classList.add("is-invalid");
+              error?.classList.add("is-visible");
+              source?.focus();
+              return;
+            }
+
+            source?.classList.remove("is-invalid");
+            error?.classList.remove("is-visible");
+          });
+        });
+
+        document.querySelectorAll("[data-support-note-source]").forEach((field) => {
+          field.addEventListener("input", () => {
+            field.classList.remove("is-invalid");
+            field.closest("[data-support-card]")?.querySelector("[data-support-note-error]")?.classList.remove("is-visible");
+          });
+        });
+      })();
+    </script>
+  </body>
+</html>

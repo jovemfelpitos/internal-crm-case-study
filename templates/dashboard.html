@@ -1,0 +1,1582 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mini CRM - Clientes</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}">
+    <style>
+      body { background: var(--crm-bg); }
+      .shell {
+        width: 100%;
+        max-width: none;
+      }
+      .panel {
+        background: var(--crm-surface);
+        border: 1px solid var(--crm-border);
+        border-radius: 8px;
+      }
+      .filter-panel {
+        position: relative;
+        z-index: 30;
+        overflow: visible !important;
+      }
+      .metric {
+        display: grid;
+        align-content: center;
+        min-height: 54px;
+        border: 1px solid var(--crm-border);
+        border-radius: 8px;
+        background: var(--crm-surface);
+      }
+      .client-name {
+        font-weight: 700;
+        color: var(--crm-text);
+        line-height: 1.2;
+      }
+      .muted-label {
+        color: var(--crm-muted);
+        font-size: .72rem;
+        font-weight: 750;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+      }
+      .filter-bar {
+        display: grid;
+        gap: .65rem;
+        grid-template-columns: var(--dashboard-filter-columns, minmax(240px, 1.35fr) repeat(3, minmax(150px, 205px)) max-content);
+        align-items: end;
+      }
+      .filter-search {
+        min-width: 0;
+      }
+      .filter-actions {
+        display: flex;
+        gap: .45rem;
+        align-items: center;
+        justify-content: flex-end;
+      }
+      .filter-actions .btn {
+        min-height: 38px;
+      }
+      .order-filter .multi-filter-menu {
+        width: min(300px, calc(100vw - 2rem));
+      }
+      .order-filter .multi-filter-options {
+        max-height: 330px;
+      }
+      .order-filter .multi-filter-option .form-check-input {
+        border-radius: 999px;
+      }
+      .order-filter .multi-filter-footer {
+        justify-content: flex-end;
+      }
+      .filter-extra {
+        display: grid;
+        gap: .75rem;
+        grid-template-columns: repeat(4, minmax(160px, 1fr)) auto;
+        align-items: end;
+      }
+      .filter-toggle {
+        min-height: 34px;
+        border: 1px solid var(--crm-border);
+        border-radius: 8px;
+        padding: .45rem .75rem;
+        color: var(--crm-text);
+        background: var(--crm-surface-muted);
+        font-weight: 650;
+        cursor: pointer;
+        list-style: none;
+      }
+      .filter-toggle::-webkit-details-marker { display: none; }
+      details:not([open]) > .filter-extra { display: none; }
+      .sort-link {
+        color: var(--crm-muted);
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+        text-decoration: none;
+        font-weight: 750;
+      }
+      .sort-link:hover {
+        color: var(--crm-text);
+        text-decoration: none;
+      }
+      .sort-active { color: #0d6efd; }
+      .last-update-cell {
+        min-width: 145px;
+      }
+      .summary-column,
+      .summary-cell {
+        width: 42px;
+        min-width: 42px !important;
+      }
+      .summary-cell {
+        padding-left: .35rem !important;
+        padding-right: .55rem !important;
+        text-align: center;
+      }
+      .dashboard-summary-button {
+        display: inline-grid;
+        place-items: center;
+        width: 26px;
+        height: 26px;
+        border: 1px solid var(--crm-border);
+        border-radius: 999px;
+        background: var(--crm-surface-muted);
+        color: var(--crm-muted);
+        font-size: .8rem;
+        font-weight: 900;
+        line-height: 1;
+      }
+      .dashboard-summary-button:hover,
+      .dashboard-summary-button:focus-visible {
+        border-color: var(--crm-primary);
+        background: var(--crm-primary-soft);
+        color: var(--crm-primary);
+      }
+      .workflow-summary-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 1070;
+        background: rgba(15, 23, 42, .42);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity .16s ease;
+      }
+      .workflow-summary-backdrop.is-open {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .workflow-summary-drawer {
+        position: fixed;
+        inset: 0 0 0 auto;
+        z-index: 1071;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        width: min(430px, 100vw);
+        max-width: 100vw;
+        background: var(--crm-surface);
+        color: var(--crm-text);
+        border-left: 1px solid var(--crm-border);
+        box-shadow: -22px 0 45px rgba(15, 23, 42, .18);
+        transform: translateX(100%);
+        transition: transform .18s ease;
+      }
+      .workflow-summary-drawer.is-open {
+        transform: translateX(0);
+      }
+      .workflow-summary-header,
+      .workflow-summary-footer {
+        padding: 1rem 1.1rem;
+        border-bottom: 1px solid var(--crm-border);
+      }
+      .workflow-summary-footer {
+        border-top: 1px solid var(--crm-border);
+        border-bottom: 0;
+      }
+      .workflow-summary-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+      }
+      .workflow-summary-close {
+        display: inline-grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        color: var(--crm-muted);
+        font-size: 1.1rem;
+        font-weight: 800;
+      }
+      .workflow-summary-close:hover,
+      .workflow-summary-close:focus-visible {
+        background: var(--crm-surface-hover);
+        color: var(--crm-text);
+      }
+      .workflow-summary-body {
+        overflow-y: auto;
+        padding: 1.05rem 1.1rem;
+      }
+      .workflow-summary-section {
+        display: grid;
+        gap: .85rem;
+      }
+      .workflow-summary-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: .8rem;
+      }
+      .workflow-summary-label {
+        color: var(--crm-muted);
+        font-size: .72rem;
+        font-weight: 800;
+        letter-spacing: .025em;
+        text-transform: uppercase;
+      }
+      .workflow-summary-value {
+        margin-top: .18rem;
+        color: var(--crm-text);
+        font-size: .92rem;
+        font-weight: 760;
+        overflow-wrap: anywhere;
+      }
+      .workflow-summary-note {
+        padding: .8rem;
+        border: 1px solid var(--crm-border);
+        border-radius: 8px;
+        background: var(--crm-surface-muted);
+        color: var(--crm-text);
+        font-size: .86rem;
+        line-height: 1.35;
+      }
+      .unlock-cell {
+        min-width: 150px;
+      }
+      .unlock-cell-alert {
+        background:
+          linear-gradient(90deg, rgba(37, 99, 235, .08), transparent 72%),
+          var(--crm-surface);
+        box-shadow: inset 2px 0 0 #2563eb;
+      }
+      .unlock-cell-alert.unlock-severity-warning {
+        background:
+          linear-gradient(90deg, rgba(245, 158, 11, .10), transparent 72%),
+          var(--crm-surface);
+        box-shadow: inset 2px 0 0 #f59e0b;
+      }
+      .unlock-cell-alert.unlock-severity-danger,
+      .unlock-cell-alert.unlock-severity-critical {
+        background:
+          linear-gradient(90deg, rgba(220, 38, 38, .09), transparent 72%),
+          var(--crm-surface);
+        box-shadow: inset 2px 0 0 #dc2626;
+      }
+      .unlock-pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 21px;
+        margin-top: .25rem;
+        padding: 0 .48rem;
+        border-radius: 999px;
+        background: rgba(37, 99, 235, .12);
+        color: #1d4ed8;
+        font-size: .7rem;
+        font-weight: 700;
+      }
+      .unlock-severity-warning .unlock-pill {
+        background: rgba(245, 158, 11, .15);
+        color: #92400e;
+      }
+      .unlock-severity-danger .unlock-pill,
+      .unlock-severity-critical .unlock-pill {
+        background: rgba(254, 226, 226, .82);
+        color: #991b1b;
+      }
+      .bulk-action-panel {
+        display: none;
+        border-bottom: 1px solid var(--crm-border);
+        background: var(--crm-surface);
+      }
+      .bulk-action-panel.is-active {
+        display: block;
+      }
+      .bulk-selection-bar {
+        position: relative;
+        z-index: 25;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: .85rem;
+        min-height: 50px;
+        padding: .65rem .85rem;
+        background:
+          linear-gradient(90deg, color-mix(in srgb, var(--crm-primary) 9%, var(--crm-surface)), var(--crm-surface) 70%);
+        color: var(--crm-text);
+        box-shadow: inset 3px 0 0 var(--crm-primary);
+      }
+      html[data-theme="dark"] .bulk-selection-bar {
+        background:
+          linear-gradient(90deg, color-mix(in srgb, var(--crm-primary) 16%, var(--crm-surface)), var(--crm-surface) 72%);
+        color: var(--crm-text);
+      }
+      .bulk-selection-summary {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: .85rem;
+        min-width: 0;
+      }
+      .bulk-selected-count {
+        color: var(--crm-text);
+        font-weight: 800;
+      }
+      .bulk-clear-button {
+        border: 0;
+        border-radius: 7px;
+        padding: .25rem .45rem;
+        background: color-mix(in srgb, var(--crm-primary) 8%, transparent);
+        color: var(--crm-primary);
+        font-size: .8rem;
+        font-weight: 760;
+      }
+      .bulk-clear-button:hover {
+        background: color-mix(in srgb, var(--crm-primary) 14%, transparent);
+        color: var(--crm-primary-hover);
+      }
+      .bulk-quick-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: .3rem;
+      }
+      .bulk-action-link,
+      .bulk-menu-trigger {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 32px;
+        border: 0;
+        border-radius: 7px;
+        padding: 0 .65rem;
+        background: transparent;
+        color: color-mix(in srgb, var(--crm-primary) 78%, var(--crm-text));
+        font-size: .82rem;
+        font-weight: 780;
+        white-space: nowrap;
+      }
+      .bulk-action-link:hover:not(:disabled),
+      .bulk-action-link:focus-visible:not(:disabled),
+      .bulk-menu[open] .bulk-menu-trigger,
+      .bulk-menu-trigger:hover {
+        background: var(--crm-primary-soft);
+        color: var(--crm-primary);
+      }
+      .bulk-action-link.danger,
+      .bulk-menu-trigger.danger {
+        color: #dc2626;
+      }
+      .bulk-action-link.danger:hover:not(:disabled),
+      .bulk-action-link.danger:focus-visible:not(:disabled) {
+        background: rgba(220, 38, 38, .10);
+        color: #b91c1c;
+      }
+      .bulk-action-link:disabled,
+      .bulk-clear-button:disabled {
+        opacity: .45;
+        cursor: not-allowed;
+      }
+      .bulk-menu {
+        position: relative;
+      }
+      .bulk-menu-trigger {
+        cursor: pointer;
+        list-style: none;
+      }
+      .bulk-menu-trigger::-webkit-details-marker {
+        display: none;
+      }
+      .bulk-menu-content {
+        position: absolute;
+        top: calc(100% + .48rem);
+        right: 0;
+        z-index: 40;
+        display: grid;
+        gap: .65rem;
+        width: min(300px, calc(100vw - 2rem));
+        padding: .85rem;
+        border: 1px solid var(--crm-border);
+        border-radius: 12px;
+        background: var(--crm-surface);
+        color: var(--crm-text);
+        box-shadow: var(--crm-shadow);
+      }
+      .bulk-menu-content.transfer-menu {
+        width: min(330px, calc(100vw - 2rem));
+      }
+      .bulk-menu-title {
+        color: var(--crm-muted);
+        font-size: .72rem;
+        font-weight: 800;
+        letter-spacing: .035em;
+        text-transform: uppercase;
+      }
+      .bulk-menu-search {
+        position: relative;
+      }
+      .bulk-menu-search .form-control {
+        min-height: 42px;
+        padding-right: 2.6rem;
+        border-radius: 10px;
+        font-size: .92rem;
+        font-weight: 650;
+      }
+      .bulk-menu-search svg {
+        position: absolute;
+        top: 50%;
+        right: .85rem;
+        width: 20px;
+        height: 20px;
+        color: var(--crm-muted);
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2.3;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        transform: translateY(-50%);
+        pointer-events: none;
+      }
+      .bulk-choice-list {
+        display: grid;
+        gap: .15rem;
+      }
+      .bulk-choice-list-scroll {
+        max-height: 300px;
+        overflow-y: auto;
+        padding-right: .2rem;
+      }
+      .bulk-choice-option {
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+        width: 100%;
+        min-height: 48px;
+        border: 0;
+        border-radius: 9px;
+        padding: .45rem .55rem;
+        background: transparent;
+        color: var(--crm-text);
+        font: inherit;
+        text-align: left;
+      }
+      .bulk-choice-option:hover,
+      .bulk-choice-option:focus-visible {
+        background: var(--crm-surface-hover);
+        color: var(--crm-text);
+      }
+      .bulk-choice-icon {
+        display: inline-grid;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+        flex: 0 0 auto;
+        color: color-mix(in srgb, var(--crm-primary) 72%, var(--crm-text));
+      }
+      .bulk-choice-icon svg {
+        width: 22px;
+        height: 22px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2.25;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .bulk-choice-text {
+        display: grid;
+        min-width: 0;
+      }
+      .bulk-choice-label {
+        color: var(--crm-text);
+        font-size: .94rem;
+        font-weight: 780;
+        line-height: 1.15;
+      }
+      .bulk-choice-subtext {
+        margin-top: .12rem;
+        color: var(--crm-muted);
+        font-size: .72rem;
+        font-weight: 650;
+      }
+      .bulk-choice-empty {
+        padding: .9rem .4rem;
+        color: var(--crm-muted);
+        font-size: .82rem;
+        text-align: center;
+      }
+      .bulk-menu-fields {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: .5rem;
+        align-items: center;
+      }
+      .bulk-menu-fields.transfer {
+        grid-template-columns: minmax(120px, .85fr) minmax(150px, 1fr) auto;
+      }
+      .bulk-menu-fields .form-select,
+      .bulk-menu-fields .btn {
+        min-height: 34px;
+        font-size: .8rem;
+      }
+      tr.is-selected > td {
+        background: color-mix(in srgb, var(--crm-primary) 12%, var(--crm-surface)) !important;
+      }
+      .bulk-check-column {
+        width: 30px;
+      }
+      .last-update-stale {
+        background:
+          linear-gradient(90deg, rgba(220, 38, 38, .08), transparent 72%),
+          var(--crm-surface);
+        box-shadow: inset 2px 0 0 #dc2626;
+      }
+      .last-update-stale .last-update-date,
+      .last-update-stale .last-update-empty {
+        color: #b91c1c !important;
+        font-weight: 750;
+      }
+      html[data-theme="dark"] .last-update-stale {
+        background:
+          linear-gradient(90deg, rgba(248, 113, 113, .14), transparent 72%),
+          var(--crm-surface);
+        box-shadow: inset 3px 0 0 #f87171;
+      }
+      html[data-theme="dark"] .last-update-stale .last-update-date,
+      html[data-theme="dark"] .last-update-stale .last-update-empty {
+        color: #fca5a5 !important;
+      }
+      .stale-hint {
+        display: inline-flex;
+        align-items: center;
+        min-height: 21px;
+        margin-top: .25rem;
+        padding: 0 .48rem;
+        border: 1px solid rgba(220, 38, 38, .22);
+        border-radius: 999px;
+        background: rgba(254, 226, 226, .68);
+        color: #991b1b;
+        font-size: .7rem;
+        font-weight: 700;
+      }
+      .dashboard-table-panel {
+        overflow: hidden;
+      }
+      .dashboard-table-panel .table-responsive {
+        overflow-x: auto;
+        overflow-y: visible;
+      }
+      .dashboard-table-panel thead th {
+        background: var(--crm-surface-muted);
+      }
+      .dashboard-table-panel tbody td {
+        min-width: 88px;
+      }
+      .dashboard-table-panel thead th.bulk-check-column,
+      .dashboard-table-panel tbody td.bulk-check-cell {
+        width: 30px;
+        min-width: 30px;
+        padding-left: .55rem;
+        padding-right: .2rem;
+      }
+      .dashboard-table-panel .client-cell {
+        min-width: 190px;
+        padding-left: .35rem;
+      }
+      .client-link {
+        display: inline;
+        color: var(--crm-text);
+        text-decoration: none;
+      }
+      .client-link:hover,
+      .client-link:focus-visible {
+        color: var(--crm-primary);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+      .dashboard-table-panel .btn-sm {
+        min-height: 30px;
+        padding: .22rem .58rem;
+        font-size: .78rem;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .stale-hint { animation: none; }
+      }
+      @media (max-width: 1200px) {
+        .filter-bar {
+          grid-template-columns: minmax(220px, 1fr) repeat(2, minmax(160px, 1fr));
+        }
+        .filter-actions {
+          justify-content: flex-start;
+        }
+        .filter-actions,
+        .filter-extra > .btn {
+          width: 100%;
+        }
+        .filter-extra {
+          grid-template-columns: repeat(2, minmax(180px, 1fr));
+        }
+      }
+      @media (max-width: 992px) {
+        .filter-bar,
+        .filter-extra {
+          grid-template-columns: 1fr;
+        }
+        .bulk-selection-bar {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+        .bulk-quick-actions {
+          justify-content: flex-start;
+        }
+        .bulk-menu {
+          position: static;
+        }
+        .bulk-menu-content {
+          left: .75rem;
+          right: .75rem;
+          width: auto;
+        }
+        .bulk-menu-fields,
+        .bulk-menu-fields.transfer {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+    {% include "_theme_head.html" %}
+  </head>
+  <body>
+    {% from "_chips.html" import option_chip %}
+    {% from "_filter_menu.html" import multi_filter %}
+    {% macro sort_header(column, label) -%}
+      <a class="sort-link {% if filters.sort == column %}sort-active{% endif %}" href="{{ dashboard_url(sort=column, direction=sort_direction_for(column), order_by=None, page=1) }}">
+        <span>{{ label }}</span>
+        {% if filters.sort == column %}
+          {% if filters.direction == 'asc' %}
+            <span aria-hidden="true">&uarr;</span>
+          {% else %}
+            <span aria-hidden="true">&darr;</span>
+          {% endif %}
+          {#
+          <span>{{ '↑' if filters.direction == 'asc' else '↓' }}</span>
+          #}
+        {% endif %}
+      </a>
+    {%- endmacro %}
+
+    {% macro status_chip(status) -%}
+      {% set class_name = {
+        'Concluido': 'status-concluido',
+        'Em andamento': 'status-em-andamento',
+        'Recusado': 'status-recusado'
+      }.get(status, 'chip-empty') %}
+      <span class="status-chip {{ class_name }}">{{ status or '-' }}</span>
+    {%- endmacro %}
+
+    {% macro reversal_chip(task) -%}
+      {% if task %}
+        {{ option_chip(reversal_status_label(task.status), reversal_status_option_styles, 'Sem reversão') }}
+      {% else %}
+        {{ option_chip(none, reversal_status_option_styles, 'Sem reversão') }}
+      {% endif %}
+    {%- endmacro %}
+
+    {% set show_team_filter = teams|length > 1 %}
+    {% set show_franchise_filter = current_user.can_view_all_franchises and franchises|length > 1 %}
+    {% set show_consultor_filter = current_user.can_view_all or current_user.role == Role.SUPERVISOR %}
+    {% set dashboard_filter_control_count = 3 + (1 if show_franchise_filter else 0) + (1 if show_team_filter else 0) + (1 if show_consultor_filter else 0) %}
+    {% set period_active = filters.date_start or filters.date_end %}
+    {% set empty_colspan = 9 + (1 if show_team_filter else 0) + (1 if show_consultor_filter else 0) + (1 if show_bulk_actions else 0) %}
+
+    {% include "_app_sidebar.html" %}
+    <nav class="navbar navbar-expand-lg bg-white border-bottom d-none">
+      <div class="container-fluid shell">
+        <a class="navbar-brand fw-semibold" href="{{ url_for('dashboard') }}">Mini CRM</a>
+        <div class="d-flex align-items-center gap-3">
+          {% if current_user.can_manage_settings or current_user.can_manage_teams or current_user.can_manage_roles %}
+            <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('settings_admin') }}">
+              Configuracoes
+            </a>
+          {% endif %}
+          {% if current_user.can_view_audit %}
+            <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('audit_admin') }}">
+              Auditoria
+            </a>
+          {% endif %}
+          {% if current_user.can_manage_users %}
+            <a class="btn btn-outline-primary btn-sm" href="{{ url_for('users_admin') }}">
+              Usuários e permissões
+            </a>
+          {% endif %}
+          {% include "_theme_toggle.html" %}
+          <span class="small text-muted">
+            {{ current_user.name }} · {{ current_user.role }}
+            {% if current_user.team %} · {{ current_user.team }}{% endif %}
+          </span>
+          <form method="post" action="{{ url_for('logout') }}">
+            {% include "_csrf_token.html" %}
+            <button class="btn btn-outline-secondary btn-sm">Sair</button>
+          </form>
+        </div>
+      </div>
+    </nav>
+
+    <main class="container-fluid shell py-4 app-main">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+        <div>
+          <p class="muted-label mb-1">Carteira de atendimento</p>
+          <h1 class="h3 mb-0">Clientes</h1>
+        </div>
+        <div class="d-flex flex-wrap gap-2 align-items-stretch">
+          {% if current_user.can_bulk_reactivate_leads or current_user.can_reactivate_leads or current_user.can_view_all %}
+            <div class="btn-group align-self-center" role="group" aria-label="Status dos clientes">
+              <a class="btn btn-sm {% if filters.state == 'active' %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="{{ dashboard_url(state='active', page=1) }}">
+                Ativos
+              </a>
+              <a class="btn btn-sm {% if filters.state == 'inactive' %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="{{ dashboard_url(state='inactive', page=1) }}">
+                Inativos
+              </a>
+            </div>
+          {% endif %}
+          {% if current_user.can_create_leads %}
+            <a class="btn btn-primary d-flex align-items-center" href="{{ url_for('create_lead') }}">
+              Novo cliente
+            </a>
+          {% endif %}
+          {% if active_filter_count %}
+            <a class="metric px-3 py-2 text-decoration-none" href="{{ url_for('dashboard') }}">
+              <div class="muted-label">Filtros ativos</div>
+              <div class="h4 mb-0">{{ active_filter_count }}</div>
+            </a>
+          {% endif %}
+          <div class="metric px-3 py-2">
+            <div class="muted-label">Resultados</div>
+            <div class="h4 mb-0">{{ total_count }}</div>
+          </div>
+        </div>
+      </div>
+
+      <section class="panel filter-panel p-3 mb-3">
+        <form method="get" action="{{ url_for('dashboard') }}">
+          <input type="hidden" name="sort" value="{{ filters.sort }}">
+          <input type="hidden" name="direction" value="{{ filters.direction }}">
+          <input type="hidden" name="state" value="{{ filters.state }}">
+          <input type="hidden" name="page" value="1">
+          <input type="hidden" name="per_page" value="{{ filters.per_page }}">
+
+          <div
+            class="filter-bar"
+            style="--dashboard-filter-columns: minmax(240px, 1.35fr) repeat({{ dashboard_filter_control_count }}, minmax(150px, 205px)) max-content;"
+          >
+            <div class="filter-search">
+              <label class="form-label visually-hidden" for="q">Busca rápida</label>
+              <input
+                id="q"
+                name="q"
+                class="form-control"
+                value="{{ filters.q or '' }}"
+                placeholder="Pesquisar por cliente ou CPF"
+              >
+            </div>
+
+            {{ multi_filter('dashboard-status', 'Status', 'status', 'Todos os status', filters.status, status_options, 'Sem status', empty_filter_value) }}
+            {{ multi_filter('dashboard-reversal-status', 'Status da reversão', 'reversal_status', 'Todos os status de reversão', filters.reversal_status, reversal_status_options, 'Sem reversão', empty_filter_value) }}
+
+            {% if show_franchise_filter %}
+              {{ multi_filter('dashboard-franchise', 'Franquia', 'franchise_id', 'Todas as franquias', filters.franchise_id, franchises) }}
+            {% endif %}
+
+            {% if show_team_filter %}
+              {{ multi_filter('dashboard-equipe', 'Equipe', 'equipe', 'Todas as equipes', filters.equipe, teams) }}
+            {% endif %}
+
+            {% if show_consultor_filter %}
+              {{ multi_filter('dashboard-consultor', 'Consultor', 'consultor', 'Todos os consultores', filters.consultor, consultores) }}
+            {% endif %}
+
+            {% set order_state = namespace(label='Ordenacao da tabela') %}
+            {% for option in dashboard_order_options %}
+              {% if filters.order_by == option.value %}
+                {% set order_state.label = option.label %}
+              {% endif %}
+            {% endfor %}
+            <details class="multi-filter order-filter">
+              <summary class="multi-filter-trigger">
+                <span class="multi-filter-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M4 7h12"></path>
+                    <path d="M4 12h8"></path>
+                    <path d="M4 17h4"></path>
+                    <path d="M18 6v12"></path>
+                    <path d="m15 15 3 3 3-3"></path>
+                  </svg>
+                </span>
+                <span class="multi-filter-copy">
+                  <span class="multi-filter-label">Ordena&ccedil;&atilde;o</span>
+                  <span class="multi-filter-value">{{ order_state.label }}</span>
+                </span>
+                <span class="multi-filter-chevron" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="m6 9 6 6 6-6"></path>
+                  </svg>
+                </span>
+              </summary>
+
+              <div class="multi-filter-menu">
+                <div class="multi-filter-options">
+                  {% for option in dashboard_order_options %}
+                    <label class="multi-filter-option">
+                      <input
+                        class="form-check-input"
+                        type="radio"
+                        name="order_by"
+                        value="{{ option.value }}"
+                        onchange="this.form.submit()"
+                        {% if filters.order_by == option.value %}checked{% endif %}
+                      >
+                      <span>{{ option.label }}</span>
+                    </label>
+                  {% endfor %}
+                </div>
+              </div>
+            </details>
+
+            <div class="filter-actions">
+              <button class="btn btn-primary" type="submit">Filtrar</button>
+              <a class="btn btn-outline-secondary" href="{{ url_for('dashboard') }}">Limpar</a>
+            </div>
+          </div>
+
+          <details class="mt-3" {% if period_active %}open{% endif %}>
+            <summary class="filter-toggle d-inline-flex align-items-center gap-2">
+              <span>Período</span>
+              {% if period_active %}<span class="badge text-bg-primary">ativo</span>{% endif %}
+            </summary>
+            <div class="filter-extra mt-3">
+              <div>
+                <label class="form-label" for="date_field_more">Qual data?</label>
+                <select id="date_field_more" name="date_field" class="form-select">
+                  <option value="data_venda" {% if filters.date_field == 'data_venda' %}selected{% endif %}>Data da venda</option>
+                  <option value="concessao" {% if filters.date_field == 'concessao' %}selected{% endif %}>Concessão</option>
+                </select>
+              </div>
+              <div>
+                <label class="form-label" for="date_start_more">De</label>
+                <input id="date_start_more" name="date_start" type="date" class="form-control" value="{{ filters.date_start or '' }}">
+              </div>
+              <div>
+                <label class="form-label" for="date_end_more">Até</label>
+                <input id="date_end_more" name="date_end" type="date" class="form-control" value="{{ filters.date_end or '' }}">
+              </div>
+              <button class="btn btn-primary" type="submit">Aplicar período</button>
+            </div>
+          </details>
+        </form>
+      </section>
+
+      {% if current_user.can_upload %}
+        <details class="panel p-3 mb-3">
+          <summary class="fw-semibold">Importação de dados</summary>
+          <form
+            method="post"
+            action="{{ url_for('upload_excel') }}"
+            enctype="multipart/form-data"
+            class="row gy-2 gx-2 align-items-end mt-3"
+          >
+            {% include "_csrf_token.html" %}
+            <div class="col-12 col-md-5 col-lg-4">
+              <label for="file" class="form-label">Arquivo Excel (.xlsx)</label>
+              <input id="file" name="file" type="file" accept=".xlsx" class="form-control" required>
+            </div>
+            {% if current_user.can_view_all_franchises and upload_franchises %}
+              <div class="col-12 col-md-4 col-lg-3">
+                <label for="upload-franchise" class="form-label">Franquia de destino</label>
+                <select id="upload-franchise" name="franchise_id" class="form-select" required>
+                  {% for franchise in upload_franchises %}
+                    <option value="{{ franchise.id }}" {% if selected_upload_franchise_id == franchise.id %}selected{% endif %}>
+                      {{ franchise.name }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+            {% endif %}
+            <div class="col-auto">
+              <button class="btn btn-primary" type="submit">Importar para o banco</button>
+            </div>
+            <div class="col-12">
+              <p class="text-muted small mb-0">
+                Os dados importados ficam salvos no SQLite do projeto em <code>instance/crm.sqlite3</code>.
+              </p>
+            </div>
+          </form>
+        </details>
+      {% endif %}
+
+      {% if show_bulk_actions %}
+        <details class="panel p-3 mb-3">
+          <summary class="fw-semibold">Manutenção em massa por Excel</summary>
+          <form
+            method="post"
+            action="{{ url_for('import_lead_maintenance') }}"
+            enctype="multipart/form-data"
+            class="row gy-2 gx-2 align-items-end mt-3"
+          >
+            {% include "_csrf_token.html" %}
+            <div class="col-12 col-md-5 col-lg-4">
+              <label for="maintenance-file" class="form-label">Arquivo Excel (.xlsx)</label>
+              <input id="maintenance-file" name="file" type="file" accept=".xlsx" class="form-control" required>
+            </div>
+            <div class="col-auto">
+              <button class="btn btn-outline-primary" type="submit">Processar manutenção</button>
+            </div>
+            <div class="col-12">
+              <p class="text-muted small mb-0">
+                Modelo esperado: <code>CPF</code>, <code>Ação</code> e <code>Motivo</code>.
+                A ação pode ser <code>inativar</code> ou <code>reativar</code>.
+              </p>
+            </div>
+          </form>
+        </details>
+      {% endif %}
+
+      <section class="panel dashboard-table-panel">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 p-3 border-bottom">
+          <div class="text-muted small">
+            Mostrando {{ pagination.start_item }}-{{ pagination.end_item }} de {{ total_count }}
+            clientes {% if filters.state == 'inactive' %}inativos{% else %}ativos{% endif %}
+          </div>
+          <form method="get" action="{{ url_for('dashboard') }}" class="d-flex align-items-center gap-2">
+            {% for key in request.args.keys() %}
+              {% if key not in ['page', 'per_page'] %}
+                {% for value in request.args.getlist(key) %}
+                  {% if value %}
+                    <input type="hidden" name="{{ key }}" value="{{ value }}">
+                  {% endif %}
+                {% endfor %}
+              {% endif %}
+            {% endfor %}
+            <input type="hidden" name="page" value="1">
+            <label class="text-muted small" for="per_page">Ver</label>
+            <select id="per_page" name="per_page" class="form-select form-select-sm" onchange="this.form.submit()">
+              {% for option in page_size_options %}
+                <option value="{{ option }}" {% if pagination.per_page == option %}selected{% endif %}>
+                  {{ option }}
+                </option>
+              {% endfor %}
+            </select>
+            <span class="text-muted small">por página</span>
+            <noscript><button class="btn btn-sm btn-outline-secondary" type="submit">Aplicar</button></noscript>
+          </form>
+        </div>
+        {% if show_bulk_actions %}
+          <form id="bulk-maintenance-form" method="post" action="{{ url_for('bulk_maintain_leads') }}">
+            {% include "_csrf_token.html" %}
+            <input type="hidden" name="next" value="{{ request.full_path }}">
+            <input type="hidden" name="status_value" data-bulk-status-value>
+            <input type="hidden" name="target_equipe" data-bulk-target-equipe>
+            <input type="hidden" name="target_consultor" data-bulk-target-consultor>
+            <div class="bulk-action-panel" data-bulk-panel>
+              <div class="bulk-selection-bar">
+                <div class="bulk-selection-summary">
+                  <span class="bulk-selected-count" data-bulk-selected-text>0 selecionados</span>
+                  <button class="bulk-clear-button" type="button" data-bulk-clear-selection disabled>
+                    Limpar seleção
+                  </button>
+                </div>
+                <div class="bulk-quick-actions">
+                  {% if current_user.can_bulk_transfer_leads and bulk_transfer_teams %}
+                    <details class="bulk-menu" data-bulk-menu>
+                      <summary class="bulk-menu-trigger">Transferir</summary>
+                      <div class="bulk-menu-content transfer-menu">
+                        <div class="bulk-menu-search">
+                          <input class="form-control" type="search" placeholder="Buscar operador" data-bulk-transfer-search aria-label="Buscar operador">
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="11" cy="11" r="7"></circle>
+                            <path d="m20 20-3.5-3.5"></path>
+                          </svg>
+                        </div>
+                        <div class="bulk-menu-title">Transferir</div>
+                        <div class="bulk-choice-list bulk-choice-list-scroll" data-bulk-transfer-list></div>
+                      </div>
+                    </details>
+                  {% endif %}
+
+                  {% if current_user.can_bulk_edit_status %}
+                    <details class="bulk-menu" data-bulk-menu>
+                      <summary class="bulk-menu-trigger">Alterar status</summary>
+                      <div class="bulk-menu-content">
+                        <div class="bulk-menu-title">Novo status</div>
+                        <div class="bulk-choice-list">
+                          {% for option in status_options %}
+                            {% set option_key = option|lower %}
+                            <button
+                              class="bulk-choice-option"
+                              type="submit"
+                              name="action"
+                              value="set_status"
+                              data-bulk-fill="status"
+                              data-bulk-value="{{ option }}"
+                              data-bulk-confirm="Alterar o status dos clientes selecionados para {{ option }}?"
+                            >
+                              <span class="bulk-choice-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24">
+                                  {% if 'andamento' in option_key %}
+                                    <path d="M13 4h.01"></path>
+                                    <path d="M10 16v5"></path>
+                                    <path d="M14 16v5"></path>
+                                    <path d="m7 9 3-3 3 3"></path>
+                                    <path d="m13 9 4 4"></path>
+                                  {% elif 'concl' in option_key or 'vend' in option_key %}
+                                    <path d="M20 6 9 17l-5-5"></path>
+                                  {% elif 'recus' in option_key or 'perd' in option_key %}
+                                    <path d="M5 21V5"></path>
+                                    <path d="M5 5h11l-1.5 4L16 13H5"></path>
+                                  {% elif 'novo' in option_key %}
+                                    <path d="M12 5v14"></path>
+                                    <path d="M5 12h14"></path>
+                                  {% else %}
+                                    <circle cx="12" cy="12" r="8"></circle>
+                                  {% endif %}
+                                </svg>
+                              </span>
+                              <span class="bulk-choice-text">
+                                <span class="bulk-choice-label">{{ option }}</span>
+                              </span>
+                            </button>
+                          {% endfor %}
+                        </div>
+                      </div>
+                    </details>
+                  {% endif %}
+
+                  {% if filters.state == 'inactive' and current_user.can_bulk_reactivate_leads %}
+                    <button
+                      class="bulk-action-link"
+                      type="submit"
+                      name="action"
+                      value="reactivate"
+                      data-bulk-requires-selection
+                      disabled
+                    >
+                      Reativar
+                    </button>
+                  {% elif filters.state != 'inactive' and current_user.can_bulk_inactivate_leads %}
+                    <button
+                      class="bulk-action-link danger"
+                      type="submit"
+                      name="action"
+                      value="inactivate"
+                      data-bulk-requires-selection
+                      data-bulk-confirm="Inativar os clientes selecionados?"
+                      disabled
+                    >
+                      Inativar
+                    </button>
+                  {% endif %}
+                  {% if current_user.can_bulk_export_leads %}
+                    <button
+                      class="bulk-action-link"
+                      type="submit"
+                      name="action"
+                      value="export"
+                      data-bulk-requires-selection
+                      disabled
+                    >
+                      Exportar
+                    </button>
+                  {% endif %}
+                  {% if current_user.can_bulk_delete_leads and filters.state != 'inactive' %}
+                    <button
+                      class="bulk-action-link danger"
+                      type="submit"
+                      name="action"
+                      value="delete"
+                      data-bulk-requires-selection
+                      data-bulk-confirm="Excluir os clientes selecionados? Essa acao remove da carteira e mantem auditoria."
+                      disabled
+                    >
+                      Excluir
+                    </button>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+        {% endif %}
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                {% if show_bulk_actions %}
+                  <th class="bulk-check-column">
+                    <input class="form-check-input js-check-all-leads" type="checkbox" aria-label="Selecionar todos desta página">
+                  </th>
+                {% endif %}
+                <th>{{ sort_header('nome_cliente', 'Cliente') }}</th>
+                <th>CPF</th>
+                {% if show_team_filter %}
+                  <th>{{ sort_header('equipe', 'Equipe') }}</th>
+                {% endif %}
+                {% if show_consultor_filter %}
+                  <th>{{ sort_header('consultor', 'Consultor') }}</th>
+                {% endif %}
+                <th>{{ sort_header('data_venda', 'Venda') }}</th>
+                <th>{{ sort_header('concessao', 'Concessão') }}</th>
+                <th>Desbloqueio</th>
+                <th>{{ sort_header('status', 'Status') }}</th>
+                <th>{{ sort_header('reversal_status', 'Status da reversão') }}</th>
+                <th>{{ sort_header('ultima_atualizacao', 'Última atualização') }}</th>
+                <th class="summary-column" aria-label="Resumo"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for lead in leads %}
+                {% set activity_audit = latest_activity_audits.get(lead.id) %}
+                {% set activity_alert = activity_alerts.get(lead.id) %}
+                {% set unlock_alert = unlock_alerts.get(lead.id) %}
+                {% set latest_activity = latest_activities_by_lead.get(lead.id) %}
+                {% set summary_workflow = dashboard_workflows_by_lead.get(lead.id) %}
+                {% set latest_reversal_task = latest_reversal_tasks_by_lead.get(lead.id) %}
+                {% set lead_detail_url = url_for('lead_detail', lead_id=lead.id, back=request.full_path) %}
+                <tr>
+                  {% if show_bulk_actions %}
+                    <td class="bulk-check-cell">
+                      <input class="form-check-input js-lead-check" type="checkbox" name="lead_ids" value="{{ lead.id }}" aria-label="Selecionar {{ lead.nome_cliente }}">
+                    </td>
+                  {% endif %}
+                  <td class="client-cell">
+                    <a
+                      class="client-name client-link"
+                      href="{{ lead_detail_url }}"
+                    >
+                      {{ lead.nome_cliente }}
+                    </a>
+                    <div class="text-muted small">{{ lead.contato or 'Sem contato cadastrado' }}</div>
+                  </td>
+                  <td>{{ lead.cpf }}</td>
+                  {% if show_team_filter %}
+                    <td>{{ lead.equipe }}</td>
+                  {% endif %}
+                  {% if show_consultor_filter %}
+                    <td>{{ lead.consultor }}</td>
+                  {% endif %}
+                  <td>{{ lead.data_venda.strftime('%d/%m/%Y') if lead.data_venda else '-' }}</td>
+                  <td>{{ lead.concessao.strftime('%d/%m/%Y') if lead.concessao else '-' }}</td>
+                  <td class="unlock-cell {% if unlock_alert and unlock_alert.active %}unlock-cell-alert unlock-severity-{{ unlock_alert.severity }}{% endif %}">
+                    {% if unlock_alert and unlock_alert.unlock_date %}
+                      <div class="fw-semibold">{{ unlock_alert.unlock_date.strftime('%d/%m/%Y') }}</div>
+                      <div class="text-muted small">
+                        {% if unlock_alert.days_left < 0 %}
+                          {{ -unlock_alert.days_left }} dia(s) vencido
+                        {% elif unlock_alert.days_left == 0 %}
+                          Hoje
+                        {% elif unlock_alert.days_left == 1 %}
+                          Amanhã
+                        {% else %}
+                          Faltam {{ unlock_alert.days_left }} dias
+                        {% endif %}
+                      </div>
+                    {% else %}
+                      <span class="text-muted small">Sem concessão</span>
+                    {% endif %}
+                    {% if unlock_alert and unlock_alert.active %}
+                      <div class="unlock-pill">{{ unlock_alert.title }}</div>
+                    {% endif %}
+                  </td>
+                  <td>{{ option_chip(lead.status, status_option_styles) }}</td>
+                  <td>{{ reversal_chip(latest_reversal_task) }}</td>
+                  <td class="last-update-cell {% if activity_alert and activity_alert.is_stale %}last-update-stale{% endif %}">
+                    {% if activity_audit %}
+                      <div class="fw-semibold last-update-date">{{ activity_audit.created_at.strftime('%d/%m/%Y %H:%M') }}</div>
+                      <div class="text-muted small">{{ activity_audit.user.name if activity_audit.user else 'Sistema' }}</div>
+                    {% else %}
+                      <span class="text-muted small last-update-empty">Sem atualização</span>
+                    {% endif %}
+                    {% if activity_alert and activity_alert.is_stale %}
+                      <div class="stale-hint">
+                        Há {{ activity_alert.days }} dias sem atualização
+                      </div>
+                    {% endif %}
+                  </td>
+                  <td class="summary-cell">
+                    <button
+                      class="dashboard-summary-button"
+                      type="button"
+                      data-workflow-summary-open="dashboard-summary-{{ lead.id }}"
+                      data-workflow-summary-lead-name="{{ lead.nome_cliente }}"
+                      data-workflow-summary-url="{{ lead_detail_url }}"
+                      aria-label="Resumo rapido de {{ lead.nome_cliente }}"
+                    >
+                      !
+                    </button>
+
+                    <template id="dashboard-summary-{{ lead.id }}">
+                      <div class="workflow-summary-section">
+                        <div class="workflow-summary-grid">
+                          <div>
+                            <div class="workflow-summary-label">Status</div>
+                            <div class="workflow-summary-value">{{ lead.status or 'Sem status' }}</div>
+                          </div>
+                          <div>
+                            <div class="workflow-summary-label">Status da reversão</div>
+                            <div class="workflow-summary-value">{{ reversal_status_label(latest_reversal_task.status) if latest_reversal_task else 'Sem reversão' }}</div>
+                          </div>
+                          <div>
+                            <div class="workflow-summary-label">CPF</div>
+                            <div class="workflow-summary-value">{{ lead.cpf }}</div>
+                          </div>
+                          <div>
+                            <div class="workflow-summary-label">Contato</div>
+                            <div class="workflow-summary-value">{{ lead.contato or 'Nao preenchido' }}</div>
+                          </div>
+                          <div>
+                            <div class="workflow-summary-label">Dono</div>
+                            <div class="workflow-summary-value">{{ lead.consultor }}</div>
+                          </div>
+                          <div>
+                            <div class="workflow-summary-label">Equipe</div>
+                            <div class="workflow-summary-value">{{ lead.equipe or 'Sem equipe' }}</div>
+                          </div>
+                          <div>
+                            <div class="workflow-summary-label">Fluxo atual</div>
+                            <div class="workflow-summary-value">{{ summary_workflow.workflow.name if summary_workflow and summary_workflow.workflow else '-' }}</div>
+                          </div>
+                          <div>
+                            <div class="workflow-summary-label">Etapa atual</div>
+                            <div class="workflow-summary-value">{{ summary_workflow.current_stage.name if summary_workflow and summary_workflow.current_stage else '-' }}</div>
+                          </div>
+                          <div>
+                            <div class="workflow-summary-label">Entrada na etapa</div>
+                            <div class="workflow-summary-value">{{ summary_workflow.entered_stage_at.strftime('%d/%m/%Y %H:%M') if summary_workflow and summary_workflow.entered_stage_at else '-' }}</div>
+                          </div>
+                          <div>
+                            <div class="workflow-summary-label">Data da venda</div>
+                            <div class="workflow-summary-value">{{ lead.data_venda.strftime('%d/%m/%Y') if lead.data_venda else '-' }}</div>
+                          </div>
+                          <div>
+                            <div class="workflow-summary-label">Concessao</div>
+                            <div class="workflow-summary-value">{{ lead.concessao.strftime('%d/%m/%Y') if lead.concessao else '-' }}</div>
+                          </div>
+                          <div>
+                            <div class="workflow-summary-label">Ultima acao operacional</div>
+                            <div class="workflow-summary-value">{{ activity_audit.created_at.strftime('%d/%m/%Y %H:%M') if activity_audit else '-' }}</div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <div class="workflow-summary-label mb-2">Ultima anotacao</div>
+                          {% if latest_activity %}
+                            <div class="workflow-summary-note">
+                              {{ latest_activity.body }}
+                              <div class="text-muted small mt-2">
+                                {{ latest_activity.user.name if latest_activity.user else 'Sistema' }}
+                                em {{ latest_activity.created_at.strftime('%d/%m/%Y %H:%M') }}
+                              </div>
+                            </div>
+                          {% else %}
+                            <div class="workflow-summary-note text-muted">Nenhuma anotacao registrada ainda.</div>
+                          {% endif %}
+                        </div>
+                      </div>
+                    </template>
+                  </td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="{{ empty_colspan }}" class="text-center text-muted py-5">
+                    Nenhum cliente encontrado para esses filtros.
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% if show_bulk_actions %}
+          </form>
+        {% endif %}
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 p-3 border-top">
+          <div class="text-muted small">
+            Página {{ pagination.page }} de {{ pagination.total_pages }}
+          </div>
+
+          {% if pagination.total_pages > 1 %}
+            <nav aria-label="Paginação de clientes">
+              <ul class="pagination pagination-sm mb-0">
+                <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                  <a
+                    class="page-link"
+                    href="{{ dashboard_url(page=pagination.page - 1 if pagination.has_prev else 1) }}"
+                    aria-label="Página anterior"
+                  >
+                    Anterior
+                  </a>
+                </li>
+
+                {% for page_number in pagination.pages %}
+                  {% if page_number %}
+                    <li class="page-item {% if page_number == pagination.page %}active{% endif %}">
+                      <a class="page-link" href="{{ dashboard_url(page=page_number) }}">{{ page_number }}</a>
+                    </li>
+                  {% else %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                  {% endif %}
+                {% endfor %}
+
+                <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                  <a
+                    class="page-link"
+                    href="{{ dashboard_url(page=pagination.page + 1 if pagination.has_next else pagination.total_pages) }}"
+                    aria-label="Próxima página"
+                  >
+                    Próxima
+                  </a>
+                </li>
+              </ul>
+            </nav>
+          {% endif %}
+        </div>
+      </section>
+      <div class="workflow-summary-backdrop" data-workflow-summary-close></div>
+      <aside class="workflow-summary-drawer" data-workflow-summary-drawer aria-hidden="true">
+        <header class="workflow-summary-header">
+          <div>
+            <div class="workflow-summary-label">Resumo rapido</div>
+            <h2 class="h5 mb-0" data-workflow-summary-title>Cliente</h2>
+          </div>
+          <button class="workflow-summary-close" type="button" data-workflow-summary-close aria-label="Fechar">x</button>
+        </header>
+        <div class="workflow-summary-body" data-workflow-summary-body></div>
+        <footer class="workflow-summary-footer">
+          <a class="btn btn-primary w-100" href="#" data-workflow-summary-link>Abrir ficha completa</a>
+        </footer>
+      </aside>
+      <script>
+        (() => {
+          const drawer = document.querySelector("[data-workflow-summary-drawer]");
+          const drawerBackdrop = document.querySelector(".workflow-summary-backdrop");
+          const drawerBody = document.querySelector("[data-workflow-summary-body]");
+          const drawerTitle = document.querySelector("[data-workflow-summary-title]");
+          const drawerLink = document.querySelector("[data-workflow-summary-link]");
+          const openButtons = Array.from(document.querySelectorAll("[data-workflow-summary-open]"));
+
+          if (!drawer || !drawerBody || !openButtons.length) {
+            return;
+          }
+
+          function closeSummaryDrawer() {
+            drawer.classList.remove("is-open");
+            drawer.setAttribute("aria-hidden", "true");
+            drawerBackdrop?.classList.remove("is-open");
+            document.body.classList.remove("overflow-hidden");
+          }
+
+          function openSummaryDrawer(button) {
+            const template = document.getElementById(button.dataset.workflowSummaryOpen);
+            if (!template) {
+              return;
+            }
+
+            drawerBody.replaceChildren(template.content.cloneNode(true));
+            if (drawerTitle) {
+              drawerTitle.textContent = button.dataset.workflowSummaryLeadName || "Cliente";
+            }
+            if (drawerLink) {
+              drawerLink.href = button.dataset.workflowSummaryUrl || "#";
+            }
+            drawer.classList.add("is-open");
+            drawer.setAttribute("aria-hidden", "false");
+            drawerBackdrop?.classList.add("is-open");
+            document.body.classList.add("overflow-hidden");
+          }
+
+          openButtons.forEach((button) => {
+            button.addEventListener("click", (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              openSummaryDrawer(button);
+            });
+          });
+
+          document.querySelectorAll("[data-workflow-summary-close]").forEach((button) => {
+            button.addEventListener("click", closeSummaryDrawer);
+          });
+
+          document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape" && drawer.classList.contains("is-open")) {
+              closeSummaryDrawer();
+            }
+          });
+        })();
+      </script>
+      {% if show_bulk_actions %}
+        <script>
+          (() => {
+            const bulkForm = document.getElementById("bulk-maintenance-form");
+            const bulkPanel = document.querySelector("[data-bulk-panel]");
+            const checkAll = document.querySelector(".js-check-all-leads");
+            const checkboxes = Array.from(document.querySelectorAll(".js-lead-check"));
+            const countLabel = document.querySelector("[data-bulk-selected-text]");
+            const clearButton = document.querySelector("[data-bulk-clear-selection]");
+            const bulkButtons = Array.from(document.querySelectorAll("[data-bulk-requires-selection]"));
+            const bulkMenus = Array.from(document.querySelectorAll("[data-bulk-menu]"));
+            const statusValueInput = document.querySelector("[data-bulk-status-value]");
+            const targetEquipeInput = document.querySelector("[data-bulk-target-equipe]");
+            const targetConsultorInput = document.querySelector("[data-bulk-target-consultor]");
+            const consultoresByTeam = {{ bulk_transfer_consultores_by_team|tojson }};
+            const transferSearch = document.querySelector("[data-bulk-transfer-search]");
+            const transferList = document.querySelector("[data-bulk-transfer-list]");
+
+            function selectedCount() {
+              return checkboxes.filter((checkbox) => checkbox.checked).length;
+            }
+
+            function updateBulkState() {
+              const count = selectedCount();
+              if (countLabel) {
+                countLabel.textContent = `${count} ${count === 1 ? "selecionado" : "selecionados"}`;
+              }
+              if (bulkPanel) {
+                bulkPanel.classList.toggle("is-active", count > 0);
+              }
+              bulkButtons.forEach((button) => {
+                button.disabled = count === 0;
+              });
+              if (clearButton) {
+                clearButton.disabled = count === 0;
+              }
+              if (checkAll) {
+                checkAll.checked = count > 0 && count === checkboxes.length;
+                checkAll.indeterminate = count > 0 && count < checkboxes.length;
+              }
+              checkboxes.forEach((checkbox) => {
+                checkbox.closest("tr")?.classList.toggle("is-selected", checkbox.checked);
+              });
+            }
+
+            function transferOptions() {
+              return Object.entries(consultoresByTeam || {}).flatMap(([team, items]) => {
+                return (items || []).map((item) => {
+                  const value = typeof item === "string" ? item : item.value;
+                  const label = typeof item === "string" ? item : item.label || item.value;
+                  return { team, value: value || "", label: label || value || "" };
+                });
+              }).filter((item) => item.team && item.value);
+            }
+
+            function renderTransferList() {
+              if (!transferList) return;
+              const term = (transferSearch?.value || "").trim().toLowerCase();
+              const options = transferOptions().filter((item) => {
+                const text = `${item.label} ${item.team}`.toLowerCase();
+                return !term || text.includes(term);
+              });
+
+              transferList.replaceChildren();
+              if (!options.length) {
+                const empty = document.createElement("div");
+                empty.className = "bulk-choice-empty";
+                empty.textContent = "Nenhum operador encontrado.";
+                transferList.appendChild(empty);
+                return;
+              }
+
+              options.forEach((item) => {
+                const button = document.createElement("button");
+                button.className = "bulk-choice-option";
+                button.type = "submit";
+                button.name = "action";
+                button.value = "transfer";
+                button.dataset.bulkFill = "transfer";
+                button.dataset.bulkTeam = item.team;
+                button.dataset.bulkConsultor = item.value;
+                button.dataset.bulkConfirm = `Transferir os clientes selecionados para ${item.label}?`;
+                button.innerHTML = `
+                  <span class="bulk-choice-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="9" cy="7" r="4"></circle>
+                      <path d="m17 11 2 2 4-4"></path>
+                    </svg>
+                  </span>
+                  <span class="bulk-choice-text">
+                    <span class="bulk-choice-label"></span>
+                    <span class="bulk-choice-subtext"></span>
+                  </span>
+                `;
+                button.querySelector(".bulk-choice-label").textContent = item.label;
+                button.querySelector(".bulk-choice-subtext").textContent = item.team;
+                transferList.appendChild(button);
+              });
+            }
+
+            checkAll?.addEventListener("change", () => {
+              checkboxes.forEach((checkbox) => {
+                checkbox.checked = checkAll.checked;
+              });
+              updateBulkState();
+            });
+
+            checkboxes.forEach((checkbox) => {
+              checkbox.addEventListener("change", updateBulkState);
+            });
+
+            clearButton?.addEventListener("click", () => {
+              checkboxes.forEach((checkbox) => {
+                checkbox.checked = false;
+              });
+              bulkMenus.forEach((menu) => {
+                menu.removeAttribute("open");
+              });
+              updateBulkState();
+            });
+
+            bulkForm?.addEventListener("submit", (event) => {
+              const submitter = event.submitter;
+              if (submitter?.dataset.bulkFill === "status" && statusValueInput) {
+                statusValueInput.value = submitter.dataset.bulkValue || "";
+              }
+              if (submitter?.dataset.bulkFill === "transfer") {
+                if (targetEquipeInput) {
+                  targetEquipeInput.value = submitter.dataset.bulkTeam || "";
+                }
+                if (targetConsultorInput) {
+                  targetConsultorInput.value = submitter.dataset.bulkConsultor || "";
+                }
+              }
+              if (submitter?.dataset.bulkConfirm && !window.confirm(submitter.dataset.bulkConfirm)) {
+                event.preventDefault();
+              }
+            });
+
+            bulkMenus.forEach((menu) => {
+              menu.addEventListener("toggle", () => {
+                if (!menu.open) return;
+                bulkMenus.forEach((otherMenu) => {
+                  if (otherMenu !== menu) {
+                    otherMenu.removeAttribute("open");
+                  }
+                });
+              });
+            });
+
+            document.addEventListener("click", (event) => {
+              bulkMenus.forEach((menu) => {
+                if (menu.open && !menu.contains(event.target)) {
+                  menu.removeAttribute("open");
+                }
+              });
+            });
+
+            transferSearch?.addEventListener("input", renderTransferList);
+            transferSearch?.addEventListener("keydown", (event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+              }
+            });
+            renderTransferList();
+            updateBulkState();
+          })();
+        </script>
+      {% endif %}
+    </main>
+  </body>
+</html>

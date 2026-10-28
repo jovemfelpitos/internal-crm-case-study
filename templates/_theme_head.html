@@ -1,0 +1,11 @@
+<script>
+  (function () {
+    const storedTheme = localStorage.getItem("crm-theme");
+    const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const theme = storedTheme || (prefersDark ? "dark" : "light");
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.dataset.bsTheme = theme;
+  })();
+</script>
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css', v='20260909-1') }}">
+<script defer src="{{ url_for('static', filename='theme.js', v='20260909-1') }}"></script>

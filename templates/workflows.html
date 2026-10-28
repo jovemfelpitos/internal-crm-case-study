@@ -1,0 +1,1581 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mini CRM - Fluxos</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}">
+    {% include "_theme_head.html" %}
+    <style>
+      .workflow-shell {
+        width: auto;
+        max-width: none;
+        min-width: 0;
+        height: 100vh;
+        max-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .workflow-shell.app-main {
+        padding: 1rem clamp(1rem, 1.6vw, 1.35rem) .85rem !important;
+      }
+
+      body {
+        overflow-x: hidden;
+      }
+
+      .workflow-header {
+        display: grid;
+        flex: 0 0 auto;
+        gap: .85rem;
+        margin-bottom: .85rem;
+        padding-right: clamp(1rem, 3.5vw, 3rem);
+      }
+
+      .workflow-titlebar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        min-width: 0;
+        gap: .8rem;
+      }
+
+      .workflow-titlebar > div {
+        min-width: 0;
+      }
+
+      .workflow-titlebar h1 {
+        color: var(--crm-text);
+        font-size: 1.25rem;
+        line-height: 1.2;
+        font-weight: 760;
+      }
+
+      .workflow-titlebar .btn {
+        max-width: 100%;
+        white-space: nowrap;
+      }
+
+      .workflow-back-button {
+        justify-self: end;
+        margin-right: clamp(.35rem, 1.5vw, 1rem);
+      }
+
+      .workflow-subtitle {
+        color: var(--crm-muted);
+        font-size: .82rem;
+      }
+
+      .workflow-toolbar {
+        position: relative;
+        z-index: 30;
+        display: grid;
+        gap: .7rem;
+        padding: .75rem .85rem;
+        max-width: 100%;
+        border: 1px solid var(--crm-border);
+        border-radius: 8px;
+        background: var(--crm-surface);
+        box-shadow: var(--crm-shadow-soft);
+        overflow: visible;
+      }
+
+      .workflow-tabs {
+        display: flex;
+        gap: .35rem;
+        overflow-x: auto;
+        padding: .05rem .05rem .15rem;
+        scrollbar-width: thin;
+      }
+
+      .workflow-tab {
+        display: inline-flex;
+        align-items: center;
+        min-height: 32px;
+        padding: 0 .75rem;
+        border: 1px solid var(--crm-border);
+        border-radius: 999px;
+        color: var(--crm-muted);
+        background: transparent;
+        font-size: .8rem;
+        font-weight: 680;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .workflow-tab:hover,
+      .workflow-tab.active {
+        border-color: var(--crm-primary);
+        color: var(--crm-primary);
+        background: var(--crm-primary-soft);
+      }
+
+      .workflow-filter-grid {
+        display: grid;
+        grid-template-columns: minmax(220px, 1fr) repeat(var(--workflow-filter-count, 4), minmax(156px, 220px)) max-content;
+        gap: .55rem;
+        align-items: end;
+        min-width: 0;
+        max-width: min(100%, calc(100vw - 72px - clamp(3.5rem, 7vw, 7rem)));
+      }
+
+      .workflow-filter-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .4rem;
+        align-items: center;
+      }
+
+      .workflow-filter-actions .btn {
+        white-space: nowrap;
+      }
+
+      .workflow-filter-grid .form-control,
+      .workflow-filter-grid .form-select {
+        min-height: 36px;
+        border-radius: 8px;
+        font-size: .84rem;
+      }
+
+      .workflow-filter-grid .form-label {
+        margin-bottom: .18rem;
+      }
+
+      .workflow-board-viewport {
+        flex: 1 1 auto;
+        width: 100%;
+        max-width: 100%;
+        min-height: 0;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: .1rem 0 .45rem;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        scrollbar-width: thin;
+        overscroll-behavior-x: contain;
+      }
+
+      .workflow-board {
+        --workflow-column-width: clamp(258px, 20vw, 304px);
+        --workflow-board-gap: .75rem;
+        --workflow-end-space: clamp(3rem, 8vw, 6rem);
+        display: grid;
+        grid-template-columns: repeat(var(--workflow-stage-count, 1), var(--workflow-column-width)) var(--workflow-end-space);
+        gap: var(--workflow-board-gap);
+        width: max-content;
+        min-width: max-content;
+        height: 100%;
+        padding-bottom: .15rem;
+      }
+
+      .workflow-board-end-space {
+        width: var(--workflow-end-space);
+        min-width: var(--workflow-end-space);
+        height: 1px;
+        pointer-events: none;
+      }
+
+      .workflow-board.is-fidelity {
+        grid-template-columns: repeat(5, minmax(220px, 1fr));
+        width: 100%;
+        min-width: calc(1100px + 3rem);
+      }
+
+      .workflow-board.is-fidelity .workflow-column {
+        width: auto;
+      }
+
+      .workflow-board.is-fidelity .workflow-column-header {
+        min-height: 64px;
+      }
+
+      .workflow-board.is-fidelity .workflow-board-end-space {
+        display: none;
+      }
+
+      .workflow-column {
+        display: flex;
+        flex-direction: column;
+        width: var(--workflow-column-width);
+        height: 100%;
+        min-height: 0;
+        max-height: none;
+        min-width: 0;
+        border: 1px solid var(--crm-border);
+        background: color-mix(in srgb, var(--crm-surface-muted) 68%, var(--crm-bg));
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .workflow-column:first-child {
+        border-left: 1px solid var(--crm-border);
+      }
+
+      .workflow-column-header {
+        position: sticky;
+        top: 0;
+        z-index: 6;
+        display: grid;
+        gap: .55rem;
+        min-height: 48px;
+        padding: .72rem .78rem .66rem;
+        border-bottom: 1px solid var(--crm-border);
+        background: var(--crm-surface);
+      }
+
+      .workflow-column-heading {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: .65rem;
+        min-width: 0;
+      }
+
+      .workflow-column-summary {
+        min-width: 0;
+      }
+
+      .workflow-column-title-line {
+        display: flex;
+        align-items: center;
+        gap: .45rem;
+        min-width: 0;
+      }
+
+      .workflow-column-title {
+        color: var(--crm-text);
+        font-size: .76rem;
+        font-weight: 760;
+        line-height: 1.25;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-transform: uppercase;
+      }
+
+      .workflow-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 24px;
+        min-height: 22px;
+        padding: 0 .45rem;
+        border-radius: 999px;
+        background: var(--crm-primary-soft);
+        color: var(--crm-primary);
+        font-size: .72rem;
+        font-weight: 760;
+      }
+
+      .workflow-column-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        flex: 0 0 auto;
+        border: 1px solid var(--crm-border);
+        border-radius: 8px;
+        background: var(--crm-surface-muted);
+        color: var(--crm-primary);
+        font-size: 1rem;
+        font-weight: 850;
+        line-height: 1;
+        cursor: pointer;
+        transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+      }
+
+      .workflow-column-toggle:hover,
+      .workflow-column-toggle:focus-visible {
+        border-color: var(--crm-primary);
+        background: var(--crm-primary-soft);
+        color: var(--crm-primary-strong);
+        outline: none;
+      }
+
+      .workflow-column-stats {
+        display: grid;
+        gap: .34rem;
+        min-width: 0;
+        margin-top: .06rem;
+        padding: .5rem .55rem;
+        border: 1px solid var(--crm-border);
+        border-radius: 7px;
+        background: color-mix(in srgb, var(--crm-surface-muted) 78%, var(--crm-surface));
+      }
+
+      .workflow-column-stats[hidden] {
+        display: none;
+      }
+
+      .workflow-column-stat {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: .65rem;
+        width: 100%;
+        min-width: 0;
+        border: 0;
+        border-radius: 5px;
+        padding: .12rem .16rem;
+        background: transparent;
+        color: var(--crm-muted);
+        font-size: .72rem;
+        line-height: 1.2;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .workflow-column-stat:hover,
+      .workflow-column-stat.is-active {
+        background: var(--crm-primary-soft);
+        color: var(--crm-text);
+      }
+
+      .workflow-column-stat span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .workflow-column-stat strong {
+        flex: 0 0 auto;
+        min-width: 1.3rem;
+        text-align: right;
+        color: var(--crm-text);
+        font-size: .74rem;
+        font-weight: 820;
+      }
+
+      .workflow-column-stat-danger strong {
+        color: #dc2626;
+      }
+
+      .workflow-column-stat-warning strong {
+        color: #d97706;
+      }
+
+      .workflow-column-stat-info strong {
+        color: var(--crm-primary);
+      }
+
+      html[data-theme="dark"] .workflow-column-stat-danger strong {
+        color: #fca5a5;
+      }
+
+      .workflow-card-list {
+        display: grid;
+        align-content: start;
+        gap: .65rem;
+        padding: .7rem;
+        overflow-y: auto;
+        min-height: 0;
+        height: 100%;
+      }
+
+      .workflow-column.is-stats-open .workflow-card-list {
+        padding-top: .9rem;
+      }
+
+      .workflow-card.is-column-filter-hidden,
+      .workflow-column-filter-empty[hidden] {
+        display: none;
+      }
+
+      .workflow-card {
+        display: block;
+        position: relative;
+        min-width: 0;
+        max-width: 100%;
+        border: 1px solid var(--crm-border);
+        border-radius: 8px;
+        padding: .78rem .82rem .72rem;
+        background: var(--crm-surface);
+        color: var(--crm-text);
+        text-decoration: none;
+        box-shadow: var(--crm-shadow-soft);
+        transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease, background-color .15s ease;
+      }
+
+      .workflow-card[data-can-drag="1"] {
+        cursor: grab;
+      }
+
+      .workflow-card.is-dragging {
+        opacity: .48;
+        transform: scale(.985);
+      }
+
+      .workflow-card:hover {
+        border-color: var(--crm-border-strong);
+        color: var(--crm-text);
+        transform: translateY(-1px);
+        box-shadow: var(--crm-shadow);
+        z-index: 5;
+      }
+
+      .workflow-card-link {
+        display: block;
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .workflow-card-link:hover {
+        color: inherit;
+      }
+
+      .workflow-card-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: .35rem;
+        margin-top: .45rem;
+        padding-top: .42rem;
+        border-top: 1px solid var(--crm-border);
+      }
+
+      .workflow-card-actions .btn {
+        min-height: 24px;
+        padding: .12rem .45rem;
+        font-size: .68rem;
+        line-height: 1.15;
+      }
+
+      .workflow-quick-form {
+        margin: 0;
+      }
+
+      .workflow-card-blocked {
+        color: var(--crm-muted);
+        font-size: .68rem;
+        font-weight: 750;
+      }
+
+      .workflow-card-list.is-drop-target {
+        outline: 2px dashed rgba(37, 99, 235, .52);
+        outline-offset: -6px;
+        background: rgba(37, 99, 235, .04);
+      }
+
+      .workflow-card-list.is-drop-blocked {
+        outline: 2px dashed rgba(220, 38, 38, .32);
+        outline-offset: -6px;
+      }
+
+      .workflow-card-alert {
+        border-color: color-mix(in srgb, var(--crm-border) 78%, var(--crm-primary));
+      }
+      .workflow-card-alert.workflow-alert-info {
+        border-color: rgba(37, 99, 235, .28);
+      }
+      .workflow-card-alert.workflow-alert-warning {
+        border-color: rgba(245, 158, 11, .34);
+      }
+      .workflow-card-alert.workflow-alert-danger,
+      .workflow-card-alert.workflow-alert-critical {
+        border-color: rgba(220, 38, 38, .34);
+      }
+
+      html[data-theme="dark"] .workflow-card-alert {
+        background: var(--crm-surface);
+      }
+
+      .workflow-card-main {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: .55rem;
+        min-width: 0;
+      }
+
+      .workflow-card-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: .5rem;
+        min-width: 0;
+        margin-bottom: .56rem;
+      }
+
+      .workflow-card-top .crm-chip {
+        flex: 0 1 auto;
+        max-width: calc(100% - 1.7rem);
+        min-width: 0;
+        min-height: 22px;
+        max-height: 22px;
+        padding: 0 .58rem;
+        font-size: .68rem;
+        font-weight: 650;
+        line-height: 1;
+        opacity: .9;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .workflow-card-summary-button {
+        display: inline-grid;
+        position: relative;
+        flex: 0 0 auto;
+        width: 24px;
+        height: 24px;
+        place-items: center;
+        overflow: hidden;
+        border: 0;
+        border-radius: 999px;
+        background: transparent;
+        color: var(--crm-muted);
+        font-size: .72rem;
+        font-weight: 760;
+        line-height: 1;
+      }
+
+      .workflow-card-summary-icon {
+        display: grid;
+        width: 100%;
+        height: 100%;
+        place-items: center;
+      }
+
+      .workflow-card-summary-button:hover,
+      .workflow-card-summary-button:focus-visible {
+        background: var(--crm-surface-hover);
+        color: var(--crm-primary);
+      }
+
+      .workflow-alert-indicator {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        width: 22px;
+        height: 22px;
+        border-radius: 999px;
+        background: rgba(220, 38, 38, .10);
+        border: 1px solid rgba(220, 38, 38, .18);
+      }
+
+      .workflow-alert-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: #dc2626;
+        box-shadow: 0 0 0 3px rgba(220, 38, 38, .13);
+      }
+
+      .workflow-alert-indicator.workflow-alert-warning {
+        background: rgba(245, 158, 11, .11);
+        border-color: rgba(245, 158, 11, .24);
+      }
+
+      .workflow-alert-indicator.workflow-alert-warning .workflow-alert-dot {
+        background: #f59e0b;
+        box-shadow: 0 0 0 4px rgba(245, 158, 11, .15);
+      }
+
+      .workflow-alert-indicator.workflow-alert-info {
+        background: rgba(37, 99, 235, .10);
+        border-color: rgba(37, 99, 235, .22);
+      }
+
+      .workflow-alert-indicator.workflow-alert-info .workflow-alert-dot {
+        background: #2563eb;
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, .14);
+      }
+
+      .workflow-alert-indicator.workflow-alert-danger,
+      .workflow-alert-indicator.workflow-alert-critical {
+        background: rgba(220, 38, 38, .10);
+        border-color: rgba(220, 38, 38, .22);
+      }
+
+      .workflow-alert-indicator.workflow-alert-danger .workflow-alert-dot,
+      .workflow-alert-indicator.workflow-alert-critical .workflow-alert-dot {
+        background: #dc2626;
+        box-shadow: 0 0 0 4px rgba(220, 38, 38, .14);
+      }
+
+      .workflow-alert-indicator.workflow-alert-new {
+        background: rgba(124, 58, 237, .10);
+        border-color: rgba(124, 58, 237, .24);
+      }
+
+      .workflow-alert-indicator.workflow-alert-new .workflow-alert-dot {
+        background: #8b5cf6;
+        box-shadow: 0 0 0 4px rgba(139, 92, 246, .15);
+      }
+
+      .workflow-alert-tooltip {
+        position: absolute;
+        top: calc(100% + .3rem);
+        right: -.15rem;
+        z-index: 20;
+        display: grid;
+        gap: .1rem;
+        width: 124px;
+        min-width: 0;
+        max-width: calc(var(--workflow-column-width) - 4rem);
+        padding: .32rem .4rem;
+        border-radius: .42rem;
+        border: 1px solid var(--crm-border);
+        background: var(--crm-text);
+        color: var(--crm-surface);
+        box-shadow: 0 10px 22px rgba(15, 23, 42, .18);
+        font-size: .58rem;
+        line-height: 1.14;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        opacity: 0;
+        transform: translateY(-3px);
+        pointer-events: none;
+        transition: opacity .15s ease, transform .15s ease;
+      }
+
+      .workflow-alert-tooltip-title {
+        font-weight: 850;
+      }
+
+      .workflow-alert-indicator:hover .workflow-alert-tooltip {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .workflow-card-title {
+        display: inline-flex;
+        align-items: flex-start;
+        flex: 1 1 auto;
+        gap: .45rem;
+        max-width: 100%;
+        color: var(--crm-text);
+        font-size: .9rem;
+        font-weight: 720;
+        line-height: 1.24;
+        overflow-wrap: anywhere;
+        min-width: 0;
+        text-decoration: none;
+      }
+
+      .workflow-card-title:hover {
+        color: var(--crm-primary);
+      }
+
+      .workflow-card-meta {
+        color: var(--crm-muted);
+        font-size: .74rem;
+      }
+
+      .workflow-card-owner {
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: .45rem;
+        min-width: 0;
+        margin-top: .58rem;
+        color: var(--crm-muted);
+        font-size: .74rem;
+        line-height: 1.25;
+      }
+
+      .workflow-owner-dot {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border: 1px solid var(--crm-border);
+        border-radius: 999px;
+        background: var(--crm-surface-muted);
+        color: var(--crm-muted);
+        flex: 0 0 auto;
+      }
+
+      .workflow-owner-dot::before {
+        content: none;
+      }
+
+      .workflow-owner-icon {
+        width: 12px;
+        height: 12px;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        fill: none;
+      }
+
+      .workflow-owner-name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .workflow-owner-dot::after {
+        content: attr(data-owner);
+        position: absolute;
+        left: 0;
+        bottom: calc(100% + .28rem);
+        z-index: 30;
+        width: 118px;
+        max-width: calc(var(--workflow-column-width) - 3.4rem);
+        padding: .3rem .38rem;
+        border: 1px solid var(--crm-border);
+        border-radius: 5px;
+        background: var(--crm-text);
+        color: var(--crm-surface);
+        box-shadow: 0 10px 22px rgba(15, 23, 42, .16);
+        font-size: .58rem;
+        font-weight: 800;
+        line-height: 1.12;
+        white-space: normal;
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(3px);
+        transition: opacity .15s ease, transform .15s ease;
+        overflow-wrap: anywhere;
+      }
+
+      .workflow-owner-dot:hover::after,
+      .workflow-owner-dot:focus-visible::after {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .workflow-card-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .35rem;
+        min-width: 0;
+        margin-top: .55rem;
+      }
+
+      .workflow-card-chips .crm-chip {
+        max-width: 100%;
+        min-width: 0;
+        min-height: 22px;
+        padding: 0 .48rem;
+        font-size: .68rem;
+        font-weight: 760;
+        opacity: .86;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .workflow-operational-chip {
+        display: inline-flex;
+        align-items: center;
+        max-width: 100%;
+        min-height: 22px;
+        padding: 0 .5rem;
+        border-radius: 999px;
+        background: rgba(59, 130, 246, .12);
+        color: var(--crm-accent);
+        border: 1px solid rgba(59, 130, 246, .22);
+        font-size: .68rem;
+        font-weight: 760;
+        line-height: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .workflow-support-mini {
+        display: inline-flex;
+        align-items: center;
+        gap: .25rem;
+        color: var(--crm-muted);
+        font-size: .69rem;
+        font-weight: 720;
+      }
+
+      .workflow-support-mini::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: #22c55e;
+        opacity: .75;
+      }
+
+      .workflow-summary-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 1070;
+        background: rgba(15, 23, 42, .42);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity .16s ease;
+      }
+
+      .workflow-summary-backdrop.is-open {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .workflow-summary-drawer {
+        position: fixed;
+        inset: 0 0 0 auto;
+        z-index: 1071;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        width: min(430px, 100vw);
+        max-width: 100vw;
+        background: var(--crm-surface);
+        color: var(--crm-text);
+        border-left: 1px solid var(--crm-border);
+        box-shadow: -22px 0 45px rgba(15, 23, 42, .18);
+        transform: translateX(100%);
+        transition: transform .18s ease;
+      }
+
+      .workflow-summary-drawer.is-open {
+        transform: translateX(0);
+      }
+
+      .workflow-summary-header,
+      .workflow-summary-footer {
+        padding: 1rem 1.1rem;
+        border-bottom: 1px solid var(--crm-border);
+      }
+
+      .workflow-summary-footer {
+        border-top: 1px solid var(--crm-border);
+        border-bottom: 0;
+      }
+
+      .workflow-summary-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+      }
+
+      .workflow-summary-close {
+        display: inline-grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        color: var(--crm-muted);
+        font-size: 1.1rem;
+        font-weight: 800;
+      }
+
+      .workflow-summary-close:hover,
+      .workflow-summary-close:focus-visible {
+        background: var(--crm-surface-hover);
+        color: var(--crm-text);
+      }
+
+      .workflow-summary-body {
+        overflow-y: auto;
+        padding: 1.05rem 1.1rem;
+      }
+
+      .workflow-summary-section {
+        display: grid;
+        gap: .85rem;
+      }
+
+      .workflow-summary-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: .8rem;
+      }
+
+      .workflow-summary-label {
+        color: var(--crm-muted);
+        font-size: .72rem;
+        font-weight: 800;
+        letter-spacing: .025em;
+        text-transform: uppercase;
+      }
+
+      .workflow-summary-value {
+        margin-top: .18rem;
+        color: var(--crm-text);
+        font-size: .92rem;
+        font-weight: 760;
+        overflow-wrap: anywhere;
+      }
+
+      .workflow-summary-note {
+        padding: .8rem;
+        border: 1px solid var(--crm-border);
+        border-radius: 8px;
+        background: var(--crm-surface-muted);
+        color: var(--crm-text);
+        font-size: .86rem;
+        line-height: 1.35;
+      }
+
+      .workflow-empty {
+        border: 1px dashed var(--crm-border);
+        border-radius: .7rem;
+        padding: 1rem;
+        color: var(--crm-muted);
+        background: color-mix(in srgb, var(--crm-surface-muted) 80%, transparent);
+        text-align: center;
+      }
+
+      .workflow-card-list > .workflow-empty {
+        border: 0;
+        border-radius: 5px;
+        padding: .85rem .4rem;
+        background: transparent;
+        color: var(--crm-muted);
+        font-size: .72rem;
+      }
+
+      @media (max-width: 992px) {
+        .workflow-shell {
+          height: calc(100vh - 64px);
+          max-height: calc(100vh - 64px);
+        }
+
+        .workflow-header {
+          padding-right: 0;
+        }
+
+        .workflow-titlebar {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .workflow-filter-grid {
+          grid-template-columns: minmax(0, 1fr) minmax(180px, .7fr);
+          max-width: none;
+        }
+
+        .workflow-filter-grid > div:first-of-type {
+          grid-column: 1 / -1;
+        }
+
+        .workflow-filter-actions {
+          grid-column: 1 / -1;
+        }
+
+        .workflow-filter-actions .btn {
+          min-width: 92px;
+        }
+
+        .workflow-board {
+          --workflow-column-width: min(300px, calc(74vw - 1rem));
+        }
+      }
+
+      @media (max-width: 576px) {
+        .workflow-shell {
+          height: auto;
+          max-height: none;
+          min-height: 100vh;
+          overflow: visible;
+          padding-left: .75rem !important;
+          padding-right: .75rem !important;
+        }
+
+        .workflow-titlebar {
+          align-items: flex-start;
+        }
+
+        .workflow-toolbar {
+          padding-top: .7rem;
+        }
+
+        .workflow-filter-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .workflow-filter-actions .btn {
+          flex: 1 1 0;
+          min-width: 0;
+        }
+
+        .workflow-board {
+          --workflow-column-width: min(300px, calc(100vw - 2rem));
+          height: min(68vh, 620px);
+        }
+
+        .workflow-card-list {
+          padding: .65rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    {% from "_chips.html" import option_chip %}
+    {% from "_filter_menu.html" import multi_filter %}
+    {% macro reversal_chip(task) -%}
+      {% if task %}
+        {{ option_chip(reversal_status_label(task.status), reversal_status_option_styles, 'Sem reversão') }}
+      {% else %}
+        {{ option_chip(none, reversal_status_option_styles, 'Sem reversão') }}
+      {% endif %}
+    {%- endmacro %}
+    {% set show_team_filter = teams|length > 1 %}
+    {% set show_franchise_filter = current_user.can_view_all_franchises and franchises|length > 1 %}
+    {% set show_consultor_filter = current_user.can_view_all or current_user.role == Role.SUPERVISOR %}
+    {% set workflow_filter_count = 2 + (1 if show_franchise_filter else 0) + (1 if show_team_filter else 0) + (1 if show_consultor_filter else 0) %}
+    {% set stage_count = stages|length if stages else 1 %}
+
+    {% include "_app_sidebar.html" %}
+
+    <main class="container-fluid workflow-shell py-4 app-main">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <header class="workflow-header">
+        <div class="workflow-titlebar">
+          <div>
+            <p class="text-muted small text-uppercase mb-1">Operacao</p>
+            <h1 class="h3 mb-1">Fluxos de clientes</h1>
+            <div class="workflow-subtitle">Acompanhe em qual etapa cada cliente esta e quem precisa de acao.</div>
+          </div>
+          <a class="btn btn-outline-secondary btn-sm workflow-back-button" href="{{ url_for('dashboard') }}">Voltar para clientes</a>
+        </div>
+
+        <div class="workflow-toolbar">
+          {% if workflows %}
+            <div class="workflow-tabs" aria-label="Fluxos disponiveis">
+              {% for workflow in workflows %}
+                <a
+                  class="workflow-tab {% if selected_workflow and workflow.id == selected_workflow.id %}active{% endif %}"
+                  href="{{ url_for('workflows_board', workflow=workflow.slug) }}"
+                >
+                  {{ workflow.name }}
+                </a>
+              {% endfor %}
+              {% if current_user.can_manage_reversals or current_user.can_work_reversal %}
+                <a class="workflow-tab" href="{{ url_for('reversal_queue') }}">Reversoes</a>
+              {% endif %}
+            </div>
+          {% endif %}
+
+          <form
+            method="get"
+            class="workflow-filter-grid"
+            style="--workflow-filter-count: {{ workflow_filter_count }};"
+          >
+            <input type="hidden" name="workflow" value="{{ selected_workflow.slug if selected_workflow else filters.workflow }}">
+            <div>
+              <label class="form-label visually-hidden" for="workflow-q">Buscar</label>
+              <input
+                id="workflow-q"
+                name="q"
+                class="form-control"
+                value="{{ filters.q or '' }}"
+                placeholder="Nome do cliente ou CPF"
+              >
+            </div>
+            {% if show_franchise_filter %}
+              {{ multi_filter('workflow-franchise', 'Franquia', 'franchise_id', 'Todas as franquias', filters.franchise_id, franchises) }}
+            {% endif %}
+            {% if show_team_filter %}
+              {{ multi_filter('workflow-equipe', 'Equipe', 'equipe', 'Todas as equipes', filters.equipe, teams) }}
+            {% endif %}
+            {% if show_consultor_filter %}
+              {{ multi_filter('workflow-consultor', 'Consultor', 'consultor', 'Todos os consultores', filters.consultor, consultores) }}
+            {% endif %}
+            {{ multi_filter('workflow-status', 'Status', 'status', 'Todos os status', filters.status, status_options, 'Sem status', empty_filter_value) }}
+            {{ multi_filter('workflow-reversal-status', 'Status da reversão', 'reversal_status', 'Todos os status de reversão', filters.reversal_status, reversal_status_options, 'Sem reversão', empty_filter_value) }}
+            <div class="workflow-filter-actions">
+              <button class="btn btn-primary" type="submit">Filtrar</button>
+              <a class="btn btn-outline-secondary" href="{{ url_for('workflows_board', workflow=selected_workflow.slug if selected_workflow else filters.workflow) }}">Limpar</a>
+            </div>
+          </form>
+        </div>
+      </header>
+
+      {% if not selected_workflow %}
+        <section class="workflow-empty">Nenhum fluxo ativo encontrado.</section>
+      {% else %}
+        <div class="workflow-board-viewport">
+          <section
+            class="workflow-board{% if selected_workflow.slug == '30-dias' %} is-fidelity{% endif %}"
+            aria-label="{{ selected_workflow.name }}"
+            style="--workflow-stage-count: {{ stage_count }};"
+            data-workflow-board
+            data-csrf-token="{{ csrf_token() }}"
+          >
+            {% for stage in stages %}
+              <article class="workflow-column">
+                <header class="workflow-column-header">
+                  <div class="workflow-column-heading">
+                    <div class="workflow-column-summary">
+                      <div class="workflow-column-title-line">
+                        <div class="workflow-column-title">{{ stage.name }}</div>
+                        <span class="workflow-count">{{ stage_counts.get(stage.id, 0) }}</span>
+                      </div>
+                      {% if stage.description %}
+                        <div class="workflow-card-meta">{{ stage.description }}</div>
+                      {% endif %}
+                    </div>
+                    <button
+                      class="workflow-column-toggle"
+                      type="button"
+                      data-column-stats-toggle
+                      aria-expanded="false"
+                      aria-controls="workflow-column-stats-{{ stage.id }}"
+                      aria-label="Mostrar resumo da etapa {{ stage.name }}"
+                    >
+                      +
+                    </button>
+                  </div>
+                  <div class="workflow-column-stats" id="workflow-column-stats-{{ stage.id }}" hidden>
+                    {% for stat in stage_column_stats.get(stage.id, []) %}
+                      <button
+                        class="workflow-column-stat workflow-column-stat-{{ stat.tone }}"
+                        type="button"
+                        data-column-filter="{{ stat.filter }}"
+                      >
+                        <span>{{ stat.label }}</span>
+                        <strong>{{ stat.value if stat.value else '-' }}</strong>
+                      </button>
+                    {% endfor %}
+                  </div>
+                </header>
+
+                <div
+                  class="workflow-card-list"
+                  data-drop-stage-id="{{ stage.id }}"
+                  data-drop-stage-name="{{ stage.name }}"
+                >
+                  {% for item in cards_by_stage.get(stage.id, []) %}
+                    {% set lead = item.lead %}
+                    {% set alert = workflow_alerts.get(item.id) %}
+                    {% set action = workflow_card_actions.get(item.id) %}
+                    {% set latest_activity = latest_activities_by_lead.get(lead.id) %}
+                    {% set latest_reversal_task = latest_reversal_tasks_by_lead.get(lead.id) %}
+                    {% set operational_workflow = operational_workflows_by_lead.get(lead.id) %}
+                    {% set show_operational_workflow = operational_workflow and operational_workflow.id != item.id %}
+                    {% set lead_detail_url = url_for('lead_detail', lead_id=lead.id, back=request.full_path) %}
+                    {% set workflow_filter_tags = 'all' %}
+                    {% if alert %}
+                      {% if alert.severity in ['critical', 'danger'] %}
+                        {% set workflow_filter_tags = workflow_filter_tags ~ ' critical' %}
+                      {% elif alert.severity == 'warning' %}
+                        {% set workflow_filter_tags = workflow_filter_tags ~ ' warning' %}
+                      {% else %}
+                        {% set workflow_filter_tags = workflow_filter_tags ~ ' info' %}
+                      {% endif %}
+                    {% endif %}
+                    {% if workflow_support_filter_match(item) %}
+                      {% set workflow_filter_tags = workflow_filter_tags ~ ' support' %}
+                    {% endif %}
+                    {% if workflow_reversal_filter_match(item, latest_reversal_tasks_by_lead) %}
+                      {% set workflow_filter_tags = workflow_filter_tags ~ ' reversal' %}
+                    {% endif %}
+                    <article
+                      class="workflow-card {% if alert %}workflow-card-alert workflow-alert-{{ alert.severity }}{% endif %}"
+                      draggable="{{ 'true' if kanban_moves_enabled and action and action.can_drag else 'false' }}"
+                      data-workflow-card
+                      data-column-filter-tags="{{ workflow_filter_tags }}"
+                      data-can-drag="{{ '1' if kanban_moves_enabled and action and action.can_drag else '0' }}"
+                      data-lead-workflow-id="{{ item.id }}"
+                      data-lead-name="{{ lead.nome_cliente }}"
+                      data-action-url="{{ url_for('quick_advance_lead_workflow', lead_workflow_id=item.id) if kanban_moves_enabled else '' }}"
+                      data-next-stage-id="{{ action.next_stage.id if kanban_moves_enabled and action and action.next_stage else '' }}"
+                      data-next-stage-name="{{ action.next_stage.name if kanban_moves_enabled and action and action.next_stage else '' }}"
+                    >
+                      <div class="workflow-card-top">
+                        {{ option_chip(lead.status, status_option_styles, 'Sem status') }}
+                        <button
+                          class="workflow-card-summary-button"
+                          type="button"
+                          data-workflow-summary-open="workflow-summary-{{ item.id }}"
+                          data-workflow-summary-lead-name="{{ lead.nome_cliente }}"
+                          data-workflow-summary-url="{{ lead_detail_url }}"
+                          aria-label="Ver resumo"
+                        ><span class="workflow-card-summary-icon" aria-hidden="true">i</span></button>
+                      </div>
+
+                      <div class="workflow-card-main">
+                        <a class="workflow-card-title" href="{{ lead_detail_url }}">{{ lead.nome_cliente }}</a>
+                        {% if alert %}
+                          <span
+                            class="workflow-alert-indicator workflow-alert-{{ alert.severity }}"
+                            aria-label="{{ alert.label }}: {{ alert.message }}"
+                          >
+                            <span class="workflow-alert-dot" aria-hidden="true"></span>
+                            <span class="workflow-alert-tooltip" role="tooltip">
+                              <span class="workflow-alert-tooltip-title">{{ alert.label }}</span>
+                              <span>{{ alert.message }}</span>
+                            </span>
+                          </span>
+                        {% endif %}
+                      </div>
+
+                      <div class="workflow-card-owner">
+                        <span
+                          class="workflow-owner-dot"
+                          tabindex="0"
+                          data-owner="{{ lead.consultor }}{% if lead.equipe %} - {{ lead.equipe }}{% endif %}"
+                          aria-label="Dono: {{ lead.consultor }}{% if lead.equipe %} - {{ lead.equipe }}{% endif %}"
+                        >
+                          <svg class="workflow-owner-icon" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M20 21a8 8 0 0 0-16 0"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                          </svg>
+                        </span>
+                        <span class="workflow-owner-name">
+                          {{ lead.consultor }}{% if lead.equipe %} - {{ lead.equipe }}{% endif %}
+                        </span>
+                      </div>
+
+                      {% if show_operational_workflow %}
+                        <div class="workflow-card-chips">
+                          <span class="workflow-operational-chip" title="{{ operational_workflow.current_stage.name if operational_workflow.current_stage else 'Fluxo ativo agora' }}">
+                            {% if operational_workflow.workflow.slug == '30-dias' %}
+                              Fidelizacao{% if unlock_days_left(lead) is not none %} · faltam {{ unlock_days_left(lead) }} dias{% endif %}
+                            {% else %}
+                              Ativo: {{ operational_workflow.workflow.name if operational_workflow.workflow else 'Fluxo operacional' }}
+                              {% if operational_workflow.current_stage %}/ {{ operational_workflow.current_stage.name }}{% endif %}
+                            {% endif %}
+                          </span>
+                        </div>
+                      {% endif %}
+
+                      <template id="workflow-summary-{{ item.id }}">
+                        <div class="workflow-summary-section">
+                          <div class="workflow-summary-grid">
+                            <div>
+                              <div class="workflow-summary-label">Status</div>
+                              <div class="workflow-summary-value">{{ lead.status or 'Sem status' }}</div>
+                            </div>
+                            <div>
+                              <div class="workflow-summary-label">Status da reversão</div>
+                              <div class="workflow-summary-value">{{ reversal_status_label(latest_reversal_task.status) if latest_reversal_task else 'Sem reversão' }}</div>
+                            </div>
+                            <div>
+                              <div class="workflow-summary-label">CPF</div>
+                              <div class="workflow-summary-value">{{ lead.cpf }}</div>
+                            </div>
+                            <div>
+                              <div class="workflow-summary-label">Contato</div>
+                              <div class="workflow-summary-value">{{ lead.contato or 'Nao preenchido' }}</div>
+                            </div>
+                            <div>
+                              <div class="workflow-summary-label">Dono</div>
+                              <div class="workflow-summary-value">{{ lead.consultor }}</div>
+                            </div>
+                            <div>
+                              <div class="workflow-summary-label">Equipe</div>
+                              <div class="workflow-summary-value">{{ lead.equipe or 'Sem equipe' }}</div>
+                            </div>
+                            <div>
+                              <div class="workflow-summary-label">Etapa atual</div>
+                              <div class="workflow-summary-value">{{ item.current_stage.name if item.current_stage else stage.name }}</div>
+                            </div>
+                            {% if show_operational_workflow %}
+                              <div>
+                                <div class="workflow-summary-label">Fluxo operacional</div>
+                                <div class="workflow-summary-value">
+                                  {{ operational_workflow.workflow.name if operational_workflow.workflow else 'Fluxo operacional' }}
+                                  {% if operational_workflow.current_stage %}/ {{ operational_workflow.current_stage.name }}{% endif %}
+                                </div>
+                              </div>
+                            {% endif %}
+                            <div>
+                              <div class="workflow-summary-label">Entrada na etapa</div>
+                              <div class="workflow-summary-value">{{ item.entered_stage_at.strftime('%d/%m/%Y %H:%M') if item.entered_stage_at else '-' }}</div>
+                            </div>
+                            <div>
+                              <div class="workflow-summary-label">Data da venda</div>
+                              <div class="workflow-summary-value">{{ lead.data_venda.strftime('%d/%m/%Y') if lead.data_venda else '-' }}</div>
+                            </div>
+                            <div>
+                              <div class="workflow-summary-label">Concessao</div>
+                              <div class="workflow-summary-value">{{ lead.concessao.strftime('%d/%m/%Y') if lead.concessao else '-' }}</div>
+                            </div>
+                            <div>
+                              <div class="workflow-summary-label">Ultima acao operacional</div>
+                              <div class="workflow-summary-value">{{ item.last_action_at.strftime('%d/%m/%Y %H:%M') if item.last_action_at else '-' }}</div>
+                            </div>
+                          </div>
+
+                          <div>
+                            <div class="workflow-summary-label mb-2">Ultima anotacao</div>
+                            {% if latest_activity %}
+                              <div class="workflow-summary-note">
+                                {{ latest_activity.body }}
+                                <div class="text-muted small mt-2">
+                                  {{ latest_activity.user.name if latest_activity.user else 'Sistema' }}
+                                  em {{ latest_activity.created_at.strftime('%d/%m/%Y %H:%M') }}
+                                </div>
+                              </div>
+                            {% else %}
+                              <div class="workflow-summary-note text-muted">Nenhuma anotacao registrada ainda.</div>
+                            {% endif %}
+                          </div>
+                        </div>
+                      </template>
+
+                    {% if kanban_moves_enabled and action %}
+                      <div class="workflow-card-actions">
+                        {% if action.can_move %}
+                          <form
+                            class="workflow-quick-form"
+                            method="post"
+                            action="{{ url_for('quick_advance_lead_workflow', lead_workflow_id=item.id) }}"
+                          >
+                            {% include "_csrf_token.html" %}
+                            <input type="hidden" name="next" value="{{ request.full_path }}">
+                            <input type="hidden" name="target_stage_id" value="{{ action.target_stage.id }}">
+                            <button class="btn btn-primary btn-sm" type="submit">
+                              {% if action.is_return_to_principal %}
+                                Concluir e voltar
+                              {% else %}
+                                Avançar
+                              {% endif %}
+                            </button>
+                          </form>
+                          {% if action.target_stage %}
+                            <span class="workflow-card-meta">para {{ action.target_stage.name }}</span>
+                          {% endif %}
+                        {% elif action.blocked_reason and action.blocked_reason != 'Última etapa' %}
+                          <span class="workflow-card-blocked">{{ action.blocked_reason }}</span>
+                        {% endif %}
+                      </div>
+                    {% endif %}
+                    </article>
+                  {% else %}
+                    <div class="workflow-empty">Nenhum cliente nesta etapa.</div>
+                  {% endfor %}
+                  <div class="workflow-empty workflow-column-filter-empty" hidden>Nenhum cliente neste filtro.</div>
+                </div>
+              </article>
+            {% endfor %}
+            <div class="workflow-board-end-space" aria-hidden="true"></div>
+          </section>
+        </div>
+      {% endif %}
+    </main>
+
+    <div class="workflow-summary-backdrop" data-workflow-summary-close></div>
+    <aside class="workflow-summary-drawer" data-workflow-summary-drawer aria-hidden="true">
+      <header class="workflow-summary-header">
+        <div>
+          <div class="workflow-summary-label">Resumo rapido</div>
+          <h2 class="h5 mb-0" data-workflow-summary-title>Cliente</h2>
+        </div>
+        <button class="workflow-summary-close" type="button" data-workflow-summary-close aria-label="Fechar">x</button>
+      </header>
+      <div class="workflow-summary-body" data-workflow-summary-body></div>
+      <footer class="workflow-summary-footer">
+        <a class="btn btn-primary w-100" href="#" data-workflow-summary-link>Abrir ficha completa</a>
+      </footer>
+    </aside>
+
+    <script>
+      (() => {
+        const board = document.querySelector("[data-workflow-board]");
+        if (!board) return;
+
+        document.querySelectorAll("[data-column-stats-toggle]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const stats = document.getElementById(button.getAttribute("aria-controls"));
+            if (!stats) {
+              return;
+            }
+            const isExpanded = button.getAttribute("aria-expanded") === "true";
+            button.setAttribute("aria-expanded", String(!isExpanded));
+            stats.hidden = isExpanded;
+            button.textContent = isExpanded ? "+" : "-";
+            button.closest(".workflow-column")?.classList.toggle("is-stats-open", !isExpanded);
+          });
+        });
+
+        const workflowColumns = Array.from(board.querySelectorAll(".workflow-column"));
+        const workflowFilterButtons = Array.from(board.querySelectorAll("[data-column-filter]"));
+
+        const applyBoardFilter = (filter) => {
+          const activeFilter = filter && filter !== "all" ? filter : "all";
+          workflowColumns.forEach((column) => {
+            const count = column.querySelector(".workflow-count");
+            const cards = Array.from(column.querySelectorAll("[data-workflow-card]"));
+            const empty = column.querySelector(".workflow-column-filter-empty");
+            const total = cards.length;
+            let visible = 0;
+            cards.forEach((card) => {
+              const tags = (card.dataset.columnFilterTags || "all").split(/\s+/);
+              const show = activeFilter === "all" || tags.includes(activeFilter);
+              card.classList.toggle("is-column-filter-hidden", !show);
+              if (show) visible += 1;
+            });
+            if (count) {
+              count.textContent = activeFilter === "all" ? total : visible;
+            }
+            if (empty) {
+              empty.hidden = activeFilter === "all" || visible > 0;
+            }
+          });
+          workflowFilterButtons.forEach((item) => {
+            item.classList.toggle("is-active", item.dataset.columnFilter === activeFilter);
+          });
+        };
+
+        workflowFilterButtons.forEach((button) => {
+          button.addEventListener("click", () => {
+            const filter = button.classList.contains("is-active") ? "all" : button.dataset.columnFilter;
+            applyBoardFilter(filter);
+          });
+        });
+
+        const drawer = document.querySelector("[data-workflow-summary-drawer]");
+        const drawerBackdrop = document.querySelector(".workflow-summary-backdrop");
+        const drawerBody = document.querySelector("[data-workflow-summary-body]");
+        const drawerTitle = drawer ? drawer.querySelector("[data-workflow-summary-title]") : null;
+        const drawerLink = document.querySelector("[data-workflow-summary-link]");
+        const csrfToken = board.dataset.csrfToken || "";
+        let draggedCard = null;
+
+        const closeSummaryDrawer = () => {
+          if (!drawer || !drawerBackdrop) return;
+          drawer.classList.remove("is-open");
+          drawerBackdrop.classList.remove("is-open");
+          drawer.setAttribute("aria-hidden", "true");
+        };
+
+        const openSummaryDrawer = (button) => {
+          if (!drawer || !drawerBackdrop || !drawerBody) return;
+
+          const template = document.getElementById(button.dataset.workflowSummaryOpen);
+          if (!template) return;
+
+          drawerBody.replaceChildren(template.content.cloneNode(true));
+          if (drawerTitle) {
+            const card = button.closest("[data-workflow-card]");
+            drawerTitle.textContent = button.dataset.workflowSummaryLeadName || card?.dataset.leadName || "Cliente";
+          }
+          if (drawerLink) {
+            drawerLink.href = button.dataset.workflowSummaryUrl || "#";
+          }
+
+          drawer.classList.add("is-open");
+          drawerBackdrop.classList.add("is-open");
+          drawer.setAttribute("aria-hidden", "false");
+        };
+
+        board.querySelectorAll("[data-workflow-summary-open]").forEach((button) => {
+          button.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            openSummaryDrawer(button);
+          });
+        });
+
+        document.querySelectorAll("[data-workflow-summary-close]").forEach((item) => {
+          item.addEventListener("click", closeSummaryDrawer);
+        });
+
+        document.addEventListener("keydown", (event) => {
+          if (event.key === "Escape") {
+            closeSummaryDrawer();
+          }
+        });
+
+        const clearDropState = () => {
+          board.querySelectorAll("[data-drop-stage-id]").forEach((list) => {
+            list.classList.remove("is-drop-target", "is-drop-blocked");
+          });
+        };
+
+        const submitMove = (card, targetStageId) => {
+          const form = document.createElement("form");
+          form.method = "post";
+          form.action = card.dataset.actionUrl;
+          form.style.display = "none";
+
+          const fields = {
+            _csrf_token: csrfToken,
+            next: window.location.pathname + window.location.search,
+            target_stage_id: targetStageId,
+          };
+
+          Object.entries(fields).forEach(([name, value]) => {
+            const input = document.createElement("input");
+            input.type = "hidden";
+            input.name = name;
+            input.value = value || "";
+            form.appendChild(input);
+          });
+
+          document.body.appendChild(form);
+          form.submit();
+        };
+
+        board.querySelectorAll("[data-workflow-card]").forEach((card) => {
+          card.addEventListener("dragstart", (event) => {
+            if (card.dataset.canDrag !== "1") {
+              event.preventDefault();
+              return;
+            }
+
+            draggedCard = card;
+            card.classList.add("is-dragging");
+            event.dataTransfer.effectAllowed = "move";
+            event.dataTransfer.setData("text/plain", card.dataset.leadWorkflowId || "");
+          });
+
+          card.addEventListener("dragend", () => {
+            card.classList.remove("is-dragging");
+            draggedCard = null;
+            clearDropState();
+          });
+        });
+
+        board.querySelectorAll("[data-drop-stage-id]").forEach((list) => {
+          list.addEventListener("dragover", (event) => {
+            if (!draggedCard) return;
+
+            event.preventDefault();
+            const isAllowedTarget = draggedCard.dataset.nextStageId === list.dataset.dropStageId;
+            clearDropState();
+            list.classList.add(isAllowedTarget ? "is-drop-target" : "is-drop-blocked");
+          });
+
+          list.addEventListener("dragleave", (event) => {
+            if (!list.contains(event.relatedTarget)) {
+              list.classList.remove("is-drop-target", "is-drop-blocked");
+            }
+          });
+
+          list.addEventListener("drop", (event) => {
+            if (!draggedCard) return;
+
+            event.preventDefault();
+            const targetStageId = list.dataset.dropStageId;
+            const nextStageId = draggedCard.dataset.nextStageId;
+            const nextStageName = draggedCard.dataset.nextStageName || "a próxima etapa";
+            const leadName = draggedCard.dataset.leadName || "este cliente";
+
+            clearDropState();
+
+            if (!nextStageId || targetStageId !== nextStageId) {
+              window.alert(`Movimento bloqueado. Arraste apenas para ${nextStageName}.`);
+              return;
+            }
+
+            const targetStageName = list.dataset.dropStageName || nextStageName;
+            if (!window.confirm(`Mover ${leadName} para ${targetStageName}?`)) {
+              return;
+            }
+
+            submitMove(draggedCard, targetStageId);
+          });
+        });
+      })();
+    </script>
+  </body>
+</html>

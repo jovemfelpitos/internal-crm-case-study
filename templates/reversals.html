@@ -1,0 +1,1128 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mini CRM - Reversoes</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}">
+    {% include "_theme_head.html" %}
+    <style>
+      .workflow-shell {
+        width: auto;
+        max-width: none;
+        min-width: 0;
+        height: 100vh;
+        max-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .workflow-shell.app-main {
+        padding: 1rem clamp(1rem, 1.6vw, 1.35rem) .85rem !important;
+      }
+
+      body {
+        background: var(--crm-bg);
+        color: var(--crm-text);
+        font-family: "DM Sans", "Nunito Sans", "Open Sans", Arial, sans-serif;
+        overflow-x: hidden;
+      }
+
+      .workflow-header {
+        display: grid;
+        flex: 0 0 auto;
+        gap: .85rem;
+        margin-bottom: .85rem;
+        padding-right: clamp(1rem, 3.5vw, 3rem);
+      }
+
+      .workflow-titlebar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        min-width: 0;
+        gap: .8rem;
+      }
+
+      .workflow-titlebar > div {
+        min-width: 0;
+      }
+
+      .workflow-titlebar h1 {
+        color: var(--crm-text);
+        font-size: 1.25rem;
+        line-height: 1.2;
+        font-weight: 760;
+      }
+
+      .workflow-back-button {
+        justify-self: end;
+        margin-right: clamp(.35rem, 1.5vw, 1rem);
+      }
+
+      .workflow-subtitle {
+        color: var(--crm-muted);
+        font-size: .82rem;
+      }
+
+      .workflow-toolbar {
+        position: relative;
+        z-index: 30;
+        display: grid;
+        gap: .7rem;
+        padding: .75rem .85rem;
+        max-width: 100%;
+        border: 1px solid var(--crm-border);
+        border-radius: 8px;
+        background: var(--crm-surface);
+        box-shadow: var(--crm-shadow-soft);
+        overflow: visible;
+      }
+
+      .workflow-tabs {
+        display: flex;
+        gap: .35rem;
+        overflow-x: auto;
+        padding: .05rem .05rem .15rem;
+        scrollbar-width: thin;
+      }
+
+      .workflow-tab {
+        display: inline-flex;
+        align-items: center;
+        min-height: 32px;
+        padding: 0 .75rem;
+        border: 1px solid var(--crm-border);
+        border-radius: 999px;
+        color: var(--crm-muted);
+        background: transparent;
+        font-size: .8rem;
+        font-weight: 680;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .workflow-tab:hover,
+      .workflow-tab.active {
+        border-color: var(--crm-primary);
+        color: var(--crm-primary);
+        background: var(--crm-primary-soft);
+      }
+
+      .workflow-filter-grid {
+        display: grid;
+        grid-template-columns: minmax(220px, 1fr) max-content;
+        gap: .55rem;
+        align-items: end;
+        min-width: 0;
+        max-width: min(100%, calc(100vw - 72px - clamp(3.5rem, 7vw, 7rem)));
+      }
+
+      .workflow-filter-grid.has-extra-filters {
+        grid-template-columns: minmax(220px, 1fr) repeat(var(--workflow-filter-count, 1), minmax(156px, 220px)) max-content;
+      }
+
+      .workflow-filter-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .4rem;
+        align-items: center;
+      }
+
+      .workflow-filter-actions .btn {
+        white-space: nowrap;
+      }
+
+      .workflow-filter-grid .form-control,
+      .workflow-filter-grid .form-select {
+        min-height: 36px;
+        border-radius: 8px;
+        font-size: .84rem;
+      }
+
+      .workflow-filter-grid .form-label {
+        margin-bottom: .18rem;
+      }
+
+      .reversal-alert-panel {
+        display: grid;
+        gap: .65rem;
+        margin-bottom: .85rem;
+      }
+
+      .reversal-notification-list {
+        display: grid;
+        gap: .45rem;
+      }
+
+      .reversal-notification {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: .65rem;
+        align-items: center;
+        border: 1px solid var(--crm-border);
+        border-left: 3px solid var(--crm-primary);
+        border-radius: 8px;
+        padding: .65rem .72rem;
+        background: var(--crm-surface);
+        box-shadow: var(--crm-shadow-soft);
+      }
+
+      .reversal-notification-critical {
+        border-left-color: #dc2626;
+      }
+
+      .reversal-notification-warning {
+        border-left-color: #f59e0b;
+      }
+
+      .reversal-notification-title {
+        color: var(--crm-text);
+        font-size: .82rem;
+        font-weight: 820;
+      }
+
+      .reversal-notification-message {
+        color: var(--crm-muted);
+        font-size: .74rem;
+        line-height: 1.35;
+      }
+
+      .workflow-board-viewport {
+        flex: 1 1 auto;
+        width: 100%;
+        max-width: 100%;
+        min-height: 0;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: .1rem 0 .45rem;
+        scrollbar-width: thin;
+      }
+
+      .workflow-board {
+        --workflow-column-width: clamp(258px, 20vw, 304px);
+        --workflow-board-gap: .75rem;
+        --workflow-end-space: clamp(3rem, 8vw, 6rem);
+        display: grid;
+        grid-template-columns: repeat(3, var(--workflow-column-width)) var(--workflow-end-space);
+        gap: var(--workflow-board-gap);
+        width: max-content;
+        min-width: max-content;
+        height: 100%;
+        padding-bottom: .15rem;
+      }
+
+      .workflow-board-end-space {
+        width: var(--workflow-end-space);
+        min-width: var(--workflow-end-space);
+        height: 1px;
+        pointer-events: none;
+      }
+
+      .workflow-column {
+        display: flex;
+        flex-direction: column;
+        width: var(--workflow-column-width);
+        height: 100%;
+        min-height: 0;
+        min-width: 0;
+        border: 1px solid var(--crm-border);
+        background: color-mix(in srgb, var(--crm-surface-muted) 68%, var(--crm-bg));
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .workflow-column-header {
+        position: sticky;
+        top: 0;
+        z-index: 6;
+        display: grid;
+        gap: .55rem;
+        padding: .72rem .78rem .66rem;
+        border-bottom: 1px solid var(--crm-border);
+        background: var(--crm-surface);
+      }
+
+      .workflow-column-heading {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: .65rem;
+        min-width: 0;
+      }
+
+      .workflow-column-summary {
+        min-width: 0;
+      }
+
+      .workflow-column-title-line {
+        display: flex;
+        align-items: center;
+        gap: .45rem;
+        min-width: 0;
+      }
+
+      .workflow-column-title {
+        color: var(--crm-text);
+        font-size: .76rem;
+        font-weight: 760;
+        line-height: 1.25;
+        text-transform: uppercase;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .workflow-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 24px;
+        min-height: 22px;
+        padding: 0 .45rem;
+        border-radius: 999px;
+        background: var(--crm-primary-soft);
+        color: var(--crm-primary);
+        font-size: .72rem;
+        font-weight: 760;
+      }
+
+      .workflow-column-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        flex: 0 0 auto;
+        border: 1px solid var(--crm-border);
+        border-radius: 8px;
+        background: var(--crm-surface-muted);
+        color: var(--crm-primary);
+        font-size: 1rem;
+        font-weight: 850;
+        line-height: 1;
+        cursor: pointer;
+        transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+      }
+
+      .workflow-column-toggle:hover,
+      .workflow-column-toggle:focus-visible {
+        border-color: var(--crm-primary);
+        background: var(--crm-primary-soft);
+        color: var(--crm-primary-strong);
+        outline: none;
+      }
+
+      .workflow-column-stats {
+        display: grid;
+        gap: .34rem;
+        min-width: 0;
+        margin-top: .06rem;
+        padding: .5rem .55rem;
+        border: 1px solid var(--crm-border);
+        border-radius: 7px;
+        background: color-mix(in srgb, var(--crm-surface-muted) 78%, var(--crm-surface));
+      }
+
+      .workflow-column-stats[hidden] {
+        display: none;
+      }
+
+      .workflow-column-stat {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: .65rem;
+        width: 100%;
+        min-width: 0;
+        border: 0;
+        border-radius: 5px;
+        padding: .12rem .16rem;
+        background: transparent;
+        color: var(--crm-muted);
+        font-size: .72rem;
+        line-height: 1.2;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .workflow-column-stat:hover,
+      .workflow-column-stat.is-active {
+        background: var(--crm-primary-soft);
+        color: var(--crm-text);
+      }
+
+      .workflow-column-stat span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .workflow-column-stat strong {
+        flex: 0 0 auto;
+        min-width: 1.3rem;
+        text-align: right;
+        color: var(--crm-text);
+        font-size: .74rem;
+        font-weight: 820;
+      }
+
+      .workflow-column-stat-danger strong {
+        color: #dc2626;
+      }
+
+      html[data-theme="dark"] .workflow-column-stat-danger strong {
+        color: #fca5a5;
+      }
+
+      .workflow-column-stat-warning strong {
+        color: #d97706;
+      }
+
+      .workflow-card-list {
+        display: grid;
+        align-content: start;
+        gap: .65rem;
+        padding: .7rem;
+        overflow-y: auto;
+        min-height: 0;
+        height: 100%;
+      }
+
+      .workflow-column.is-stats-open .workflow-card-list {
+        padding-top: .9rem;
+      }
+
+      .workflow-card.is-column-filter-hidden,
+      .workflow-column-filter-empty[hidden] {
+        display: none;
+      }
+
+      .workflow-card {
+        display: block;
+        position: relative;
+        min-width: 0;
+        max-width: 100%;
+        border: 1px solid var(--crm-border);
+        border-radius: 8px;
+        padding: .78rem .82rem .72rem;
+        background: var(--crm-surface);
+        color: var(--crm-text);
+        text-decoration: none;
+        box-shadow: var(--crm-shadow-soft);
+        transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease, background-color .15s ease;
+      }
+
+      .workflow-card:hover {
+        border-color: var(--crm-border-strong);
+        color: var(--crm-text);
+        transform: translateY(-1px);
+        box-shadow: var(--crm-shadow);
+        z-index: 5;
+      }
+
+      .workflow-card-alert {
+        border-color: rgba(220, 38, 38, .34);
+      }
+
+      .workflow-card-top,
+      .workflow-card-main,
+      .workflow-card-owner,
+      .workflow-card-actions {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+      }
+
+      .workflow-card-top {
+        justify-content: space-between;
+        gap: .5rem;
+        margin-bottom: .56rem;
+      }
+
+      .reversal-mini-chip {
+        display: inline-flex;
+        align-items: center;
+        max-width: calc(100% - 1.7rem);
+        min-height: 22px;
+        padding: 0 .58rem;
+        border-radius: 999px;
+        border: 1px solid rgba(37, 99, 235, .28);
+        background: var(--crm-primary-soft);
+        color: var(--crm-primary);
+        font-size: .68rem;
+        font-weight: 750;
+        line-height: 1;
+      }
+
+      .reversal-mini-chip-overdue {
+        border-color: rgba(220, 38, 38, .30);
+        background: rgba(220, 38, 38, .10);
+        color: #b91c1c;
+      }
+
+      html[data-theme="dark"] .reversal-mini-chip-overdue {
+        color: #fca5a5;
+      }
+
+      .workflow-alert-indicator {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        width: 22px;
+        height: 22px;
+        border-radius: 999px;
+        background: rgba(220, 38, 38, .10);
+        border: 1px solid rgba(220, 38, 38, .18);
+      }
+
+      .workflow-alert-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: #dc2626;
+        box-shadow: 0 0 0 3px rgba(220, 38, 38, .13);
+      }
+
+      .workflow-alert-tooltip {
+        position: absolute;
+        top: calc(100% + .3rem);
+        right: -.15rem;
+        z-index: 20;
+        display: grid;
+        gap: .1rem;
+        width: 132px;
+        max-width: calc(var(--workflow-column-width) - 4rem);
+        padding: .32rem .4rem;
+        border-radius: .42rem;
+        border: 1px solid var(--crm-border);
+        background: var(--crm-text);
+        color: var(--crm-surface);
+        box-shadow: 0 10px 22px rgba(15, 23, 42, .18);
+        font-size: .58rem;
+        line-height: 1.14;
+        white-space: normal;
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(-3px);
+        transition: opacity .15s ease, transform .15s ease;
+      }
+
+      .workflow-alert-tooltip-title {
+        font-weight: 850;
+      }
+
+      .workflow-alert-indicator:hover .workflow-alert-tooltip {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .workflow-card-main {
+        justify-content: space-between;
+        gap: .55rem;
+        align-items: flex-start;
+      }
+
+      .workflow-card-title {
+        display: inline-flex;
+        align-items: flex-start;
+        flex: 1 1 auto;
+        gap: .45rem;
+        max-width: 100%;
+        color: var(--crm-text);
+        font-size: .9rem;
+        font-weight: 720;
+        line-height: 1.24;
+        overflow-wrap: anywhere;
+        min-width: 0;
+        text-decoration: none;
+      }
+
+      .workflow-card-title:hover {
+        color: var(--crm-primary);
+      }
+
+      .workflow-card-meta {
+        color: var(--crm-muted);
+        font-size: .74rem;
+      }
+
+      .workflow-card-owner {
+        flex-wrap: nowrap;
+        gap: .45rem;
+        margin-top: .58rem;
+        color: var(--crm-muted);
+        font-size: .74rem;
+        line-height: 1.25;
+      }
+
+      .workflow-owner-dot {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border: 1px solid var(--crm-border);
+        border-radius: 999px;
+        background: var(--crm-surface-muted);
+        color: var(--crm-muted);
+        flex: 0 0 auto;
+      }
+
+      .workflow-owner-icon {
+        width: 12px;
+        height: 12px;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        fill: none;
+      }
+
+      .workflow-owner-name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .workflow-owner-dot::after {
+        content: attr(data-owner);
+        position: absolute;
+        left: 0;
+        bottom: calc(100% + .28rem);
+        z-index: 30;
+        width: 130px;
+        max-width: calc(var(--workflow-column-width) - 3.4rem);
+        padding: .3rem .38rem;
+        border: 1px solid var(--crm-border);
+        border-radius: 5px;
+        background: var(--crm-text);
+        color: var(--crm-surface);
+        box-shadow: 0 10px 22px rgba(15, 23, 42, .16);
+        font-size: .58rem;
+        font-weight: 800;
+        line-height: 1.12;
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(3px);
+        transition: opacity .15s ease, transform .15s ease;
+        overflow-wrap: anywhere;
+      }
+
+      .workflow-owner-dot:hover::after,
+      .workflow-owner-dot:focus-visible::after {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .workflow-card-actions {
+        flex-wrap: wrap;
+        gap: .35rem;
+        margin-top: .45rem;
+        padding-top: .42rem;
+        border-top: 1px solid var(--crm-border);
+      }
+
+      .workflow-card-actions .btn {
+        min-height: 24px;
+        padding: .12rem .45rem;
+        font-size: .68rem;
+        line-height: 1.15;
+      }
+
+      .workflow-quick-form {
+        margin: 0;
+      }
+
+      .reversal-assignment-form {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: .35rem;
+        align-items: center;
+        width: 100%;
+        margin: 0;
+      }
+
+      .reversal-assignment-form .form-select {
+        min-height: 28px;
+        padding-top: .18rem;
+        padding-bottom: .18rem;
+        border-radius: 7px;
+        font-size: .72rem;
+      }
+
+      .support-modal {
+        width: min(420px, calc(100vw - 2rem));
+        max-width: calc(100vw - 2rem);
+        padding: 0;
+        border: 0;
+        border-radius: 12px;
+        background: transparent;
+      }
+
+      .support-modal::backdrop {
+        background: rgba(15, 23, 42, .58);
+      }
+
+      .support-modal-card {
+        position: relative;
+        display: grid;
+        gap: .75rem;
+        padding: 1.1rem;
+        border: 1px solid var(--crm-border);
+        border-radius: 12px;
+        background: var(--crm-surface);
+        color: var(--crm-text);
+        box-shadow: var(--crm-shadow);
+      }
+
+      .support-modal-close {
+        position: absolute;
+        top: .65rem;
+        right: .75rem;
+        border: 0;
+        background: transparent;
+        color: var(--crm-muted);
+        font-size: 1.1rem;
+        line-height: 1;
+      }
+
+      .support-modal-title {
+        color: var(--crm-text);
+        font-size: 1.08rem;
+        font-weight: 820;
+        margin: 0;
+      }
+
+      .workflow-empty {
+        padding: .75rem;
+        border: 1px dashed var(--crm-border);
+        border-radius: 8px;
+        color: var(--crm-muted);
+        font-size: .8rem;
+        text-align: center;
+      }
+
+      @media (max-width: 980px) {
+        .workflow-filter-grid {
+          grid-template-columns: 1fr 1fr;
+          max-width: 100%;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .workflow-shell {
+          height: auto;
+          max-height: none;
+          overflow: visible;
+        }
+
+        .workflow-titlebar {
+          grid-template-columns: 1fr;
+        }
+
+        .workflow-filter-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .workflow-board-viewport {
+          overflow: visible;
+        }
+
+        .workflow-board {
+          width: 100%;
+          min-width: 0;
+          height: auto;
+          grid-template-columns: 1fr;
+        }
+
+        .workflow-board-end-space {
+          display: none;
+        }
+
+        .workflow-column {
+          width: 100%;
+          min-height: 280px;
+        }
+
+        .reversal-notification {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    {% from "_filter_menu.html" import multi_filter %}
+    {% set show_franchise_filter = current_user.can_view_all_franchises and franchises|length > 1 %}
+    {% set show_team_filter = current_user.can_manage_reversals and filter_options.teams|length > 1 %}
+    {% set show_reversor_filter = current_user.can_manage_reversals and filter_options.assigned_users|length > 1 %}
+    {% set reversal_filter_count = (1 if show_franchise_filter else 0) + (1 if show_team_filter else 0) + (1 if show_reversor_filter else 0) %}
+    {% include "_app_sidebar.html" %}
+
+    <main class="container-fluid workflow-shell py-4 app-main">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <header class="workflow-header">
+        <div class="workflow-titlebar">
+          <div>
+            <p class="text-muted small text-uppercase mb-1">Operacao</p>
+            <h1 class="h3 mb-1">Fluxos de clientes</h1>
+            <div class="workflow-subtitle">Reversoes ativas centralizadas junto da operacao de fluxos.</div>
+          </div>
+          <a class="btn btn-outline-secondary btn-sm workflow-back-button" href="{{ url_for('dashboard') }}">Voltar para clientes</a>
+        </div>
+
+        <div class="workflow-toolbar">
+          <div class="workflow-tabs" aria-label="Fluxos disponiveis">
+            {% for workflow in workflows %}
+              <a class="workflow-tab" href="{{ url_for('workflows_board', workflow=workflow.slug) }}">
+                {{ workflow.name }}
+              </a>
+            {% endfor %}
+            <a class="workflow-tab active" href="{{ url_for('reversal_queue') }}">Reversoes</a>
+          </div>
+
+          <form
+            method="get"
+            class="workflow-filter-grid {% if reversal_filter_count %}has-extra-filters{% endif %}"
+            style="--workflow-filter-count: {{ reversal_filter_count if reversal_filter_count else 1 }};"
+            action="{{ url_for('reversal_queue') }}"
+          >
+            <div>
+              <label class="form-label visually-hidden" for="reversal-q">Buscar</label>
+              <input
+                id="reversal-q"
+                name="q"
+                class="form-control"
+                value="{{ filters.q or '' }}"
+                placeholder="Nome do cliente ou CPF"
+              >
+            </div>
+
+            {% if show_franchise_filter %}
+              {{ multi_filter('reversal-franchise', 'Franquia', 'franchise_id', 'Todas as franquias', filters.franchise_id, franchises) }}
+            {% endif %}
+
+            {% if show_team_filter %}
+              {{ multi_filter('reversal-team', 'Equipe', 'equipe', 'Todas as equipes', filters.equipe, filter_options.teams) }}
+            {% endif %}
+
+            {% if show_reversor_filter %}
+              {{ multi_filter('reversal-assignee', 'Reversor', 'assigned_user_id', 'Todos os reversores', filters.assigned_user_id, filter_options.assigned_users) }}
+            {% endif %}
+
+            <div class="workflow-filter-actions">
+              <button class="btn btn-primary" type="submit">Filtrar</button>
+              <a class="btn btn-outline-secondary" href="{{ url_for('reversal_queue') }}">Limpar</a>
+            </div>
+          </form>
+        </div>
+      </header>
+
+      {% if reversal_notifications %}
+        <section class="reversal-alert-panel" aria-label="Alertas da reversao">
+          <div class="reversal-notification-list">
+            {% for notification in reversal_notifications %}
+              <article class="reversal-notification reversal-notification-{{ notification.severity }}">
+                <div>
+                  <div class="reversal-notification-title">{{ notification.title }}</div>
+                  <div class="reversal-notification-message">
+                    {{ notification.message }}
+                  </div>
+                </div>
+                <div class="d-flex flex-wrap gap-2 justify-content-end">
+                  {% if notification.lead %}
+                    <a class="btn btn-outline-primary btn-sm" href="{{ url_for('lead_detail', lead_id=notification.lead.id, back=request.full_path) }}">Abrir cliente</a>
+                  {% endif %}
+                  <form method="post" action="{{ url_for('read_reversal_notification', notification_id=notification.id) }}">
+                    {% include "_csrf_token.html" %}
+                    <input type="hidden" name="next" value="{{ request.full_path }}">
+                    <button class="btn btn-outline-secondary btn-sm" type="submit">Marcar lido</button>
+                  </form>
+                </div>
+              </article>
+            {% endfor %}
+          </div>
+        </section>
+      {% endif %}
+
+      <div class="workflow-board-viewport">
+        <section class="workflow-board" aria-label="Reversoes ativas">
+          {% for column in columns %}
+            <article class="workflow-column">
+              <header class="workflow-column-header">
+                <div class="workflow-column-heading">
+                  <div class="workflow-column-summary">
+                    <div class="workflow-column-title-line">
+                      <div class="workflow-column-title">{{ column.label }}</div>
+                      <span class="workflow-count">{{ column.count }}</span>
+                    </div>
+                    <div class="workflow-card-meta">{{ column.description }}</div>
+                  </div>
+                  <button
+                    class="workflow-column-toggle"
+                    type="button"
+                    data-column-stats-toggle
+                    aria-expanded="false"
+                    aria-controls="reversal-column-stats-{{ column.key }}"
+                    aria-label="Mostrar resumo da coluna {{ column.label }}"
+                  >
+                    +
+                  </button>
+                </div>
+                <div class="workflow-column-stats" id="reversal-column-stats-{{ column.key }}" hidden>
+                  {% for stat in column.stats %}
+                    <button
+                      class="workflow-column-stat workflow-column-stat-{{ stat.tone }}"
+                      type="button"
+                      data-column-filter="{{ stat.filter }}"
+                    >
+                      <span>{{ stat.label }}</span>
+                      <strong>{{ stat.value if stat.value else '-' }}</strong>
+                    </button>
+                  {% endfor %}
+                </div>
+              </header>
+
+              <div class="workflow-card-list">
+                {% if column.tasks %}
+                  {% for task in column.tasks %}
+                    {% set lead = task.lead %}
+                    {% set deadline = deadlines.get(task.id) %}
+                    {% set can_act = can_work_reversal_task(current_user, task) and task.assigned_user_id %}
+                    {% set can_assign = can_assign_reversal_task(current_user, task) %}
+                    {% set assignment_options = reversal_assignment_options(task) %}
+                    {% set lead_detail_url = url_for('lead_detail', lead_id=lead.id, back=request.full_path) %}
+                    {% set reversal_filter_tags = 'all' %}
+                    {% if task.status in ['assigned', 'in_progress'] %}
+                      {% set reversal_filter_tags = reversal_filter_tags ~ ' active' %}
+                    {% endif %}
+                    {% if task.status == 'queued' %}
+                      {% set reversal_filter_tags = reversal_filter_tags ~ ' queued' %}
+                    {% endif %}
+                    {% if deadline and deadline.is_overdue %}
+                      {% set reversal_filter_tags = reversal_filter_tags ~ ' overdue' %}
+                    {% endif %}
+                    {% if task.priority_level == 'urgent' %}
+                      {% set reversal_filter_tags = reversal_filter_tags ~ ' urgent' %}
+                    {% endif %}
+                    <article class="workflow-card {% if deadline and deadline.is_overdue %}workflow-card-alert{% endif %}" data-workflow-card data-column-filter-tags="{{ reversal_filter_tags }}">
+                      <div class="workflow-card-top">
+                        <span class="reversal-mini-chip {% if deadline and deadline.is_overdue %}reversal-mini-chip-overdue{% endif %}">
+                          {% if task.assigned_user %}
+                            {{ reversal_status_label(task.status) }}
+                          {% else %}
+                            Aguardando sorteio
+                          {% endif %}
+                        </span>
+                        {% if deadline and deadline.is_overdue %}
+                          <span class="workflow-alert-indicator" aria-label="Reversao em atraso">
+                            <span class="workflow-alert-dot" aria-hidden="true"></span>
+                            <span class="workflow-alert-tooltip" role="tooltip">
+                              <span class="workflow-alert-tooltip-title">Em atraso</span>
+                              <span>Venceu ha {{ deadline.overdue_hours }}h.</span>
+                            </span>
+                          </span>
+                        {% endif %}
+                      </div>
+
+                      <div class="workflow-card-main">
+                        <a class="workflow-card-title" href="{{ lead_detail_url }}">{{ lead.nome_cliente }}</a>
+                      </div>
+
+                      <div class="workflow-card-meta">
+                        {{ reversal_tabulation_label(task.tabulation) }} - {{ reversal_priority_label(task.priority_level) }}
+                      </div>
+
+                      <div class="workflow-card-owner">
+                        <span
+                          class="workflow-owner-dot"
+                          data-owner="Reversor: {{ task.assigned_user.name if task.assigned_user else 'Sem reversor atribuido' }}"
+                          tabindex="0"
+                          aria-label="Dono do contrato"
+                        >
+                          <svg class="workflow-owner-icon" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                            <path d="M8 7a4 4 0 1 1 8 0 4 4 0 0 1-8 0Z"></path>
+                            <path d="M5 21a7 7 0 0 1 14 0"></path>
+                          </svg>
+                        </span>
+                        <span class="workflow-owner-name">
+                          Dono: {{ task.owner_name or lead.consultor or 'Sem dono informado' }}
+                        </span>
+                      </div>
+
+                      <div class="workflow-card-actions">
+                        {% if can_assign %}
+                          <form class="reversal-assignment-form" method="post" action="{{ url_for('assign_reversal', task_id=task.id) }}">
+                            {% include "_csrf_token.html" %}
+                            <input type="hidden" name="next" value="{{ request.full_path }}">
+                            <select class="form-select form-select-sm" name="assigned_user_id" required>
+                              <option value="">Escolher reversor</option>
+                              {% for option in assignment_options %}
+                                <option value="{{ option.id }}" {% if task.assigned_user_id == option.id %}selected{% endif %}>{{ option.name }}</option>
+                              {% endfor %}
+                            </select>
+                            <button class="btn btn-outline-primary btn-sm" type="submit">
+                              {{ 'Transferir' if task.assigned_user_id else 'Atribuir' }}
+                            </button>
+                          </form>
+                        {% endif %}
+
+                        {% if can_act %}
+                          <button
+                            class="btn btn-success btn-sm"
+                            type="button"
+                            data-support-modal-open="reversal-complete-modal-{{ task.id }}"
+                          >
+                            Concluir
+                          </button>
+                        {% endif %}
+                      </div>
+                      {% if can_act %}
+                        {% set min_note_chars = reversal_min_note_chars(task) %}
+                        <dialog class="support-modal" id="reversal-complete-modal-{{ task.id }}">
+                          <form method="post" action="{{ url_for('complete_reversal', task_id=task.id) }}" class="support-modal-card">
+                            {% include "_csrf_token.html" %}
+                            <input type="hidden" name="next" value="{{ request.full_path }}">
+                            <button class="support-modal-close" type="button" data-support-modal-close aria-label="Fechar">x</button>
+                            <p class="field-label mb-1">Reversao</p>
+                            <h2 class="support-modal-title">Concluir reversao</h2>
+                            <div class="text-muted small">
+                              Registre o resultado e um resumo claro da abordagem antes de finalizar.
+                            </div>
+                            <label class="field-label" for="complete-result-{{ task.id }}">Resultado</label>
+                            <select id="complete-result-{{ task.id }}" name="reversal_result" class="form-select" required>
+                              <option value="">Selecione o resultado</option>
+                              {% for option in reversal_result_options(task.tabulation) %}
+                                <option value="{{ option.value }}">{{ option.label }} - {{ option.sentiment_label }}</option>
+                              {% endfor %}
+                            </select>
+                            <label class="field-label" for="complete-note-{{ task.id }}">Anotacao</label>
+                            <textarea
+                              id="complete-note-{{ task.id }}"
+                              name="reversal_note"
+                              class="form-control"
+                              rows="5"
+                              minlength="{{ min_note_chars }}"
+                              required
+                              placeholder="Explique o contato, retorno do cliente e qualquer ponto importante para o dono do contrato"
+                            ></textarea>
+                            <div class="text-muted small">Minimo de {{ min_note_chars }} caracteres.</div>
+                            <div class="d-flex justify-content-end gap-2 mt-2">
+                              <button class="btn btn-outline-secondary btn-sm" type="button" data-support-modal-close>Cancelar</button>
+                              <button class="btn btn-success btn-sm" type="submit">Confirmar conclusao</button>
+                            </div>
+                          </form>
+                        </dialog>
+                      {% endif %}
+                    </article>
+                  {% endfor %}
+                {% else %}
+                  <div class="workflow-empty">Nenhuma reversao nesta coluna.</div>
+                {% endif %}
+                <div class="workflow-empty workflow-column-filter-empty" hidden>Nenhuma reversao neste filtro.</div>
+              </div>
+            </article>
+          {% endfor %}
+          <div class="workflow-board-end-space" aria-hidden="true"></div>
+        </section>
+      </div>
+    </main>
+    <script>
+      document.querySelectorAll("[data-column-stats-toggle]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const stats = document.getElementById(button.getAttribute("aria-controls"));
+          if (!stats) {
+            return;
+          }
+          const isExpanded = button.getAttribute("aria-expanded") === "true";
+          button.setAttribute("aria-expanded", String(!isExpanded));
+          stats.hidden = isExpanded;
+          button.textContent = isExpanded ? "+" : "-";
+          button.closest(".workflow-column")?.classList.toggle("is-stats-open", !isExpanded);
+        });
+      });
+
+      const reversalBoard = document.querySelector(".workflow-board");
+      const reversalColumns = reversalBoard ? Array.from(reversalBoard.querySelectorAll(".workflow-column")) : [];
+      const reversalFilterButtons = reversalBoard ? Array.from(reversalBoard.querySelectorAll("[data-column-filter]")) : [];
+
+      const applyReversalBoardFilter = (filter) => {
+        const activeFilter = filter && filter !== "all" ? filter : "all";
+        reversalColumns.forEach((column) => {
+          const count = column.querySelector(".workflow-count");
+          const cards = Array.from(column.querySelectorAll("[data-workflow-card]"));
+          const empty = column.querySelector(".workflow-column-filter-empty");
+          const total = cards.length;
+          let visible = 0;
+          cards.forEach((card) => {
+            const tags = (card.dataset.columnFilterTags || "all").split(/\s+/);
+            const show = activeFilter === "all" || tags.includes(activeFilter);
+            card.classList.toggle("is-column-filter-hidden", !show);
+            if (show) visible += 1;
+          });
+          if (count) {
+            count.textContent = activeFilter === "all" ? total : visible;
+          }
+          if (empty) {
+            empty.hidden = activeFilter === "all" || visible > 0;
+          }
+        });
+        reversalFilterButtons.forEach((item) => {
+          item.classList.toggle("is-active", item.dataset.columnFilter === activeFilter);
+        });
+      };
+
+      reversalFilterButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          const filter = button.classList.contains("is-active") ? "all" : button.dataset.columnFilter;
+          applyReversalBoardFilter(filter);
+        });
+      });
+
+      document.querySelectorAll("[data-support-modal-open]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const modal = document.getElementById(button.dataset.supportModalOpen);
+          if (!modal) {
+            return;
+          }
+          if (typeof modal.showModal === "function") {
+            modal.showModal();
+          } else {
+            modal.setAttribute("open", "");
+          }
+        });
+      });
+
+      document.querySelectorAll(".support-modal").forEach((modal) => {
+        const closeModal = () => {
+          if (typeof modal.close === "function") {
+            modal.close();
+          } else {
+            modal.removeAttribute("open");
+          }
+        };
+        modal.querySelectorAll("[data-support-modal-close]").forEach((button) => {
+          button.addEventListener("click", closeModal);
+        });
+        modal.addEventListener("click", (event) => {
+          if (event.target === modal) {
+            closeModal();
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

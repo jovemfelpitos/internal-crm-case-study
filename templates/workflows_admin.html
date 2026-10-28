@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mini CRM - Admin de fluxos</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}">
+    {% include "_theme_head.html" %}
+    <style>
+      .workflow-admin-shell {
+        max-width: 1560px;
+      }
+
+      .surface {
+        border: 1px solid var(--crm-border);
+        border-radius: .75rem;
+        background: var(--crm-surface);
+        color: var(--crm-text);
+        box-shadow: var(--crm-shadow);
+      }
+
+      .workflow-admin-grid {
+        display: grid;
+        grid-template-columns: minmax(260px, .32fr) minmax(0, 1fr);
+        gap: 1rem;
+        align-items: start;
+      }
+
+      .workflow-list {
+        display: grid;
+        gap: .5rem;
+      }
+
+      .workflow-list-link {
+        display: block;
+        border: 1px solid var(--crm-border);
+        border-radius: .65rem;
+        padding: .75rem;
+        color: var(--crm-text);
+        background: var(--crm-surface-muted);
+        text-decoration: none;
+      }
+
+      .workflow-list-link:hover,
+      .workflow-list-link.active {
+        border-color: var(--crm-primary);
+        color: var(--crm-primary);
+        background: var(--crm-primary-soft);
+      }
+
+      .workflow-stage-card {
+        border: 1px solid var(--crm-border);
+        border-radius: .75rem;
+        background: var(--crm-surface-muted);
+      }
+
+      .rule-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: .5rem .85rem;
+      }
+
+      .stage-timing-panel {
+        border: 1px solid var(--crm-border);
+        border-radius: .65rem;
+        padding: .85rem;
+        background: var(--crm-surface);
+      }
+
+      .stage-timing-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+        gap: .85rem;
+      }
+
+      .stage-help {
+        margin-top: .25rem;
+        color: var(--crm-muted);
+        font-size: .78rem;
+        line-height: 1.25;
+      }
+
+      .stage-advanced-rules {
+        margin-top: .85rem;
+        padding-top: .75rem;
+        border-top: 1px solid var(--crm-border);
+      }
+
+      .stage-advanced-rules summary {
+        width: fit-content;
+        cursor: pointer;
+        color: var(--crm-primary);
+        font-size: .84rem;
+        font-weight: 800;
+      }
+
+      .stage-advanced-rules[open] summary {
+        margin-bottom: .75rem;
+      }
+
+      .checklist-row {
+        border: 1px solid var(--crm-border);
+        border-radius: .55rem;
+        background: var(--crm-surface);
+        padding: .75rem;
+      }
+
+      .mini-label {
+        color: var(--crm-muted);
+        font-size: .76rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .02em;
+      }
+
+      @media (max-width: 1100px) {
+        .workflow-admin-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    {% include "_app_sidebar.html" %}
+
+    <main class="container-fluid workflow-admin-shell py-4 app-main">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+        <div>
+          <p class="text-muted small text-uppercase mb-1">Administracao</p>
+          <h1 class="h3 mb-1">Fluxos operacionais</h1>
+          <div class="text-muted">Configure etapas, prazos, campos obrigatorios e tarefas sem alterar codigo.</div>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+          <a class="btn btn-outline-secondary" href="{{ url_for('workflows_admin') }}">Painel de tarefas</a>
+          <a class="btn btn-outline-secondary" href="{{ url_for('settings_admin') }}">Configuracoes gerais</a>
+        </div>
+      </div>
+
+      <div class="workflow-admin-grid">
+        <aside class="surface p-3">
+          <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+            <h2 class="h6 mb-0">Fluxos</h2>
+            <span class="badge text-bg-primary">{{ workflows|length }}</span>
+          </div>
+
+          <div class="workflow-list mb-4">
+            {% for workflow in workflows %}
+              {% set usage = workflow_usage_counts.get(workflow.id, {}) %}
+              <a
+                class="workflow-list-link {% if selected_workflow and workflow.id == selected_workflow.id %}active{% endif %}"
+                href="{{ url_for('workflows_admin', workflow_id=workflow.id) }}"
+              >
+                <div class="d-flex justify-content-between gap-2">
+                  <strong>{{ workflow.name }}</strong>
+                  <span class="badge {% if workflow.active %}text-bg-success{% else %}text-bg-secondary{% endif %}">
+                    {{ 'Ativo' if workflow.active else 'Inativo' }}
+                  </span>
+                </div>
+                <div class="text-muted small mt-1">
+                  {{ workflow.slug }} · {{ usage.get('lead_workflows', 0) }} clientes
+                </div>
+              </a>
+            {% else %}
+              <div class="text-muted small">Nenhum fluxo cadastrado.</div>
+            {% endfor %}
+          </div>
+
+          <form method="post" action="{{ url_for('create_workflow_admin') }}" class="row g-2">
+            {% include "_csrf_token.html" %}
+            <div class="col-12">
+              <label class="form-label" for="new-workflow-name">Novo fluxo</label>
+              <input id="new-workflow-name" name="name" class="form-control" placeholder="Ex: Retencao">
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="new-workflow-slug">Identificador</label>
+              <input id="new-workflow-slug" name="slug" class="form-control" placeholder="Opcional, ex: retencao">
+            </div>
+            <div class="col-6">
+              <label class="form-label" for="new-workflow-sort">Ordem</label>
+              <input id="new-workflow-sort" name="sort_order" type="number" class="form-control" value="0">
+            </div>
+            <div class="col-6 d-flex align-items-end">
+              <div class="form-check mb-2">
+                <input id="new-workflow-active" name="active" class="form-check-input" type="checkbox" checked>
+                <label class="form-check-label" for="new-workflow-active">Ativo</label>
+              </div>
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="new-workflow-description">Descricao</label>
+              <textarea id="new-workflow-description" name="description" class="form-control" rows="2"></textarea>
+            </div>
+            <div class="col-12">
+              <button class="btn btn-primary w-100" type="submit">Criar fluxo</button>
+            </div>
+          </form>
+        </aside>
+
+        <section class="surface p-3 p-lg-4">
+          {% if not selected_workflow %}
+            <div class="text-center text-muted py-5">Selecione ou crie um fluxo para configurar.</div>
+          {% else %}
+            {% set workflow_usage = workflow_usage_counts.get(selected_workflow.id, {}) %}
+            <form method="post" action="{{ url_for('update_workflow_admin', workflow_id=selected_workflow.id) }}" class="row g-3 mb-4">
+              {% include "_csrf_token.html" %}
+              <div class="col-12 col-xl-4">
+                <label class="form-label" for="workflow-name">Nome do fluxo</label>
+                <input id="workflow-name" name="name" class="form-control" value="{{ selected_workflow.name }}">
+              </div>
+              <div class="col-12 col-md-4 col-xl-3">
+                <label class="form-label" for="workflow-slug">Identificador</label>
+                <input id="workflow-slug" name="slug" class="form-control" value="{{ selected_workflow.slug }}">
+              </div>
+              <div class="col-6 col-md-2 col-xl-1">
+                <label class="form-label" for="workflow-sort">Ordem</label>
+                <input id="workflow-sort" name="sort_order" type="number" class="form-control" value="{{ selected_workflow.sort_order }}">
+              </div>
+              <div class="col-6 col-md-3 col-xl-2 d-flex align-items-end">
+                <div>
+                  <div class="form-check">
+                    <input id="workflow-active" name="active" class="form-check-input" type="checkbox" {% if selected_workflow.active %}checked{% endif %}>
+                    <label class="form-check-label" for="workflow-active">Ativo</label>
+                  </div>
+                  <div class="form-check">
+                    <input id="workflow-auto" name="auto_move_enabled" class="form-check-input" type="checkbox" {% if selected_workflow.auto_move_enabled %}checked{% endif %}>
+                    <label class="form-check-label" for="workflow-auto">Auto mover</label>
+                  </div>
+                </div>
+              </div>
+              <div class="col-12">
+                <label class="form-label" for="workflow-description">Descricao</label>
+                <textarea id="workflow-description" name="description" class="form-control" rows="2">{{ selected_workflow.description or '' }}</textarea>
+              </div>
+              <div class="col-12 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div class="text-muted small">
+                  Uso: {{ workflow_usage.get('lead_workflows', 0) }} clientes ·
+                  {{ workflow_usage.get('stages', 0) }} etapas ·
+                  {{ workflow_usage.get('transitions', 0) }} movimentos
+                </div>
+                <div class="d-flex gap-2">
+                  <button class="btn btn-success" type="submit">Salvar fluxo</button>
+                </div>
+              </div>
+            </form>
+
+            <form method="post" action="{{ url_for('delete_workflow_admin', workflow_id=selected_workflow.id) }}" class="mb-4">
+              {% include "_csrf_token.html" %}
+              <button class="btn btn-outline-danger btn-sm" type="submit" onclick="return confirm('Excluir este fluxo? Se estiver em uso, o sistema vai bloquear.')">
+                Excluir fluxo
+              </button>
+            </form>
+
+            <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
+              <div>
+                <h2 class="h5 mb-1">Etapas</h2>
+                <div class="text-muted small">Configure o prazo operacional da etapa. Prazo total fica em opcoes avancadas.</div>
+              </div>
+            </div>
+
+            <form method="post" action="{{ url_for('create_workflow_stage_admin', workflow_id=selected_workflow.id) }}" class="row g-2 mb-4">
+              {% include "_csrf_token.html" %}
+              <div class="col-12 col-md-4">
+                <label class="form-label" for="new-stage-name">Nova etapa</label>
+                <input id="new-stage-name" name="name" class="form-control" placeholder="Ex: Analise">
+              </div>
+              <div class="col-12 col-md-3">
+                <label class="form-label" for="new-stage-slug">Identificador</label>
+                <input id="new-stage-slug" name="slug" class="form-control" placeholder="Opcional">
+              </div>
+              <div class="col-6 col-md-2">
+                <label class="form-label" for="new-stage-sort">Ordem</label>
+                <input id="new-stage-sort" name="sort_order" type="number" class="form-control" value="{{ stages|length + 1 }}">
+              </div>
+              <div class="col-12">
+                <div class="stage-timing-panel">
+                  <div class="mini-label mb-2">Prazo operacional</div>
+                  <div class="stage-timing-grid">
+                    <div>
+                      <label class="form-label" for="new-stage-first-action">Etapa precisa ter acao em ate</label>
+                      <div class="input-group">
+                        <input id="new-stage-first-action" name="first_action_hours" type="number" min="1" class="form-control" placeholder="Ex: 24">
+                        <span class="input-group-text">horas</span>
+                      </div>
+                      <div class="stage-help">Conta tarefa, atuacao ou movimentacao. Padrao do sistema: 24h.</div>
+                    </div>
+                    <div>
+                      <label class="form-label" for="new-stage-support-sla">Apoio precisa atuar em até</label>
+                      <div class="input-group">
+                        <input id="new-stage-support-sla" name="support_sla_hours" type="number" min="1" class="form-control" placeholder="Ex: 24">
+                        <span class="input-group-text">horas</span>
+                      </div>
+                      <div class="stage-help">Usado quando a etapa puder ser enviada para apoio.</div>
+                    </div>
+                  </div>
+
+                  <details class="stage-advanced-rules">
+                    <summary>Prazo total da etapa (avançado)</summary>
+                    <div class="stage-timing-grid">
+                      <div>
+                        <label class="form-label" for="new-stage-max-days">Vencer etapa após</label>
+                        <div class="input-group">
+                          <input id="new-stage-max-days" name="max_days" type="number" min="1" class="form-control" placeholder="Ex: 3">
+                          <span class="input-group-text">dias</span>
+                        </div>
+                        <div class="stage-help">Regra avancada para datas corridas, alem do prazo operacional.</div>
+                      </div>
+                      <div>
+                        <label class="form-label" for="new-stage-alert-days">Avisar antes do vencimento</label>
+                        <div class="input-group">
+                          <input id="new-stage-alert-days" name="alert_days_before" type="number" min="0" class="form-control" placeholder="Ex: 1">
+                          <span class="input-group-text">dias</span>
+                        </div>
+                        <div class="stage-help">Só funciona quando “Vencer etapa após” estiver preenchido.</div>
+                      </div>
+                    </div>
+                  </details>
+                </div>
+              </div>
+              <div class="col-6 col-md-2 d-flex align-items-end">
+                <div class="form-check mb-2">
+                  <input id="new-stage-active" name="active" class="form-check-input" type="checkbox" checked>
+                  <label class="form-check-label" for="new-stage-active">Ativa</label>
+                </div>
+              </div>
+              <div class="col-auto d-flex align-items-end">
+                <button class="btn btn-primary" type="submit">Criar etapa</button>
+              </div>
+            </form>
+
+            <div class="d-grid gap-3">
+              {% for stage in stages %}
+                {% set usage = usage_by_stage.get(stage.id, {}) %}
+                {% set selected_required_fields = stage_required_fields(stage) %}
+                <article class="workflow-stage-card p-3">
+                  <form method="post" action="{{ url_for('update_workflow_stage_admin', stage_id=stage.id) }}" class="row g-3">
+                    {% include "_csrf_token.html" %}
+                    <div class="col-12 col-lg-4">
+                      <label class="form-label" for="stage-name-{{ stage.id }}">Etapa</label>
+                      <input id="stage-name-{{ stage.id }}" name="name" class="form-control" value="{{ stage.name }}">
+                    </div>
+                    <div class="col-12 col-md-4 col-lg-3">
+                      <label class="form-label" for="stage-slug-{{ stage.id }}">Identificador</label>
+                      <input id="stage-slug-{{ stage.id }}" name="slug" class="form-control" value="{{ stage.slug }}">
+                    </div>
+                    <div class="col-6 col-md-2 col-lg-1">
+                      <label class="form-label" for="stage-sort-{{ stage.id }}">Ordem</label>
+                      <input id="stage-sort-{{ stage.id }}" name="sort_order" type="number" class="form-control" value="{{ stage.sort_order }}">
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label" for="stage-description-{{ stage.id }}">Descricao</label>
+                      <textarea id="stage-description-{{ stage.id }}" name="description" class="form-control" rows="2">{{ stage.description or '' }}</textarea>
+                    </div>
+                    <div class="col-12">
+                      <div class="stage-timing-panel">
+                        <div class="mini-label mb-2">Prazo operacional</div>
+                        <div class="stage-timing-grid">
+                          <div>
+                            <label class="form-label" for="stage-first-action-{{ stage.id }}">Etapa precisa ter acao em ate</label>
+                            <div class="input-group">
+                              <input id="stage-first-action-{{ stage.id }}" name="first_action_hours" type="number" min="1" class="form-control" value="{{ stage.first_action_hours if stage.first_action_hours is not none else '' }}" placeholder="Ex: 24">
+                              <span class="input-group-text">horas</span>
+                            </div>
+                            <div class="stage-help">Conta tarefa, atuacao ou movimentacao. Em branco usa o padrao de 24h.</div>
+                          </div>
+                          <div>
+                            <label class="form-label" for="stage-support-sla-{{ stage.id }}">Apoio precisa atuar em até</label>
+                            <div class="input-group">
+                              <input id="stage-support-sla-{{ stage.id }}" name="support_sla_hours" type="number" min="1" class="form-control" value="{{ stage.support_sla_hours if stage.support_sla_hours is not none else '' }}" placeholder="Ex: 24">
+                              <span class="input-group-text">horas</span>
+                            </div>
+                            <div class="stage-help">Usado quando a etapa puder ser enviada para apoio.</div>
+                          </div>
+                        </div>
+
+                        <details class="stage-advanced-rules" {% if stage.max_days or stage.alert_days_before is not none %}open{% endif %}>
+                          <summary>Prazo total da etapa (avançado)</summary>
+                          <div class="stage-timing-grid">
+                            <div>
+                              <label class="form-label" for="stage-max-days-{{ stage.id }}">Vencer etapa após</label>
+                              <div class="input-group">
+                                <input id="stage-max-days-{{ stage.id }}" name="max_days" type="number" min="1" class="form-control" value="{{ stage.max_days if stage.max_days is not none else '' }}" placeholder="Ex: 3">
+                                <span class="input-group-text">dias</span>
+                              </div>
+                              <div class="stage-help">Regra avancada para datas corridas, alem do prazo operacional.</div>
+                            </div>
+                            <div>
+                              <label class="form-label" for="stage-alert-days-{{ stage.id }}">Avisar antes do vencimento</label>
+                              <div class="input-group">
+                                <input id="stage-alert-days-{{ stage.id }}" name="alert_days_before" type="number" min="0" class="form-control" value="{{ stage.alert_days_before if stage.alert_days_before is not none else '' }}" placeholder="Ex: 1">
+                                <span class="input-group-text">dias</span>
+                              </div>
+                              <div class="stage-help">Só funciona quando “Vencer etapa após” estiver preenchido.</div>
+                            </div>
+                          </div>
+                        </details>
+                      </div>
+                    </div>
+                    <div class="col-12">
+                      <div class="mini-label mb-2">Regras</div>
+                      <div class="rule-grid">
+                        <div class="form-check">
+                          <input id="stage-active-{{ stage.id }}" name="active" class="form-check-input" type="checkbox" {% if stage.active %}checked{% endif %}>
+                          <label class="form-check-label" for="stage-active-{{ stage.id }}">Etapa ativa</label>
+                        </div>
+                        <div class="form-check">
+                          <input id="stage-checklist-{{ stage.id }}" name="requires_checklist" class="form-check-input" type="checkbox" {% if stage.requires_checklist %}checked{% endif %}>
+                          <label class="form-check-label" for="stage-checklist-{{ stage.id }}">Tarefa obrigatoria</label>
+                        </div>
+                        <div class="form-check">
+                          <input id="stage-note-{{ stage.id }}" name="requires_note" class="form-check-input" type="checkbox" {% if stage.requires_note %}checked{% endif %}>
+                          <label class="form-check-label" for="stage-note-{{ stage.id }}">Anotacao obrigatoria</label>
+                        </div>
+                        <div class="form-check">
+                          <input id="stage-auto-{{ stage.id }}" name="allow_auto_move" class="form-check-input" type="checkbox" {% if stage.allow_auto_move %}checked{% endif %}>
+                          <label class="form-check-label" for="stage-auto-{{ stage.id }}">Permite auto mover</label>
+                        </div>
+                        <div class="form-check">
+                          <input id="stage-support-{{ stage.id }}" name="requires_support" class="form-check-input" type="checkbox" {% if stage.requires_support %}checked{% endif %}>
+                          <label class="form-check-label" for="stage-support-{{ stage.id }}">Pode ir para apoio</label>
+                        </div>
+                        {% for field, label in required_field_choices %}
+                          <div class="form-check">
+                            <input
+                              id="stage-field-{{ stage.id }}-{{ field }}"
+                              name="required_field_{{ field }}"
+                              class="form-check-input"
+                              type="checkbox"
+                              {% if field in selected_required_fields %}checked{% endif %}
+                            >
+                            <label class="form-check-label" for="stage-field-{{ stage.id }}-{{ field }}">Campo: {{ label }}</label>
+                          </div>
+                        {% endfor %}
+                      </div>
+                    </div>
+                    <div class="col-12 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                      <div class="text-muted small">
+                        Uso: {{ usage.get('lead_workflows', 0) }} clientes ·
+                        {{ usage.get('transitions', 0) }} movimentos ·
+                        {{ usage.get('activities', 0) }} atuacoes ·
+                        {{ usage.get('checklist_items', 0) }} tarefas
+                      </div>
+                      <div class="d-flex gap-2">
+                        <button class="btn btn-success btn-sm" type="submit">Salvar etapa</button>
+                      </div>
+                    </div>
+                  </form>
+
+                  <div class="d-flex flex-wrap gap-2 mt-2">
+                    <form method="post" action="{{ url_for('toggle_workflow_stage_admin', stage_id=stage.id) }}">
+                      {% include "_csrf_token.html" %}
+                      <input type="hidden" name="active" value="{{ '0' if stage.active else '1' }}">
+                      {% if stage.active %}
+                        <button class="btn btn-outline-secondary btn-sm" type="submit" onclick="return confirm('Inativar esta etapa? Ela deixara de aparecer nos fluxos operacionais.')">
+                          Inativar etapa
+                        </button>
+                      {% else %}
+                        <button class="btn btn-outline-primary btn-sm" type="submit">
+                          Ativar etapa
+                        </button>
+                      {% endif %}
+                    </form>
+
+                    <form method="post" action="{{ url_for('delete_workflow_stage_admin', stage_id=stage.id) }}">
+                      {% include "_csrf_token.html" %}
+                      <button class="btn btn-outline-danger btn-sm" type="submit" onclick="return confirm('Excluir esta etapa? Se estiver em uso, o sistema vai bloquear.')">
+                        Excluir etapa
+                      </button>
+                    </form>
+                  </div>
+
+                  <div class="mt-3 pt-3 border-top">
+                    <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-2">
+                      <div>
+                        <div class="mini-label">Tarefas</div>
+                        <div class="text-muted small">Tarefas aparecem na ficha do cliente nesta etapa.</div>
+                      </div>
+                    </div>
+
+                    <form method="post" action="{{ url_for('create_workflow_checklist_item_admin', stage_id=stage.id) }}" class="row g-2 align-items-end mb-3">
+                      {% include "_csrf_token.html" %}
+                      <div class="col-12 col-lg-5">
+                        <label class="form-label" for="new-check-label-{{ stage.id }}">Nova tarefa</label>
+                        <input id="new-check-label-{{ stage.id }}" name="label" class="form-control" placeholder="Ex: Cliente conferido">
+                      </div>
+                      <div class="col-6 col-lg-2">
+                        <label class="form-label" for="new-check-sort-{{ stage.id }}">Ordem</label>
+                        <input id="new-check-sort-{{ stage.id }}" name="sort_order" type="number" class="form-control" value="{{ checklist_by_stage.get(stage.id, [])|length + 1 }}">
+                      </div>
+                      <div class="col-6 col-lg-2">
+                        <div class="form-check mb-2">
+                          <input id="new-check-required-{{ stage.id }}" name="required" class="form-check-input" type="checkbox" checked>
+                          <label class="form-check-label" for="new-check-required-{{ stage.id }}">Obrigatorio</label>
+                        </div>
+                        <div class="form-check">
+                          <input id="new-check-active-{{ stage.id }}" name="active" class="form-check-input" type="checkbox" checked>
+                          <label class="form-check-label" for="new-check-active-{{ stage.id }}">Ativo</label>
+                        </div>
+                      </div>
+                      <div class="col-auto">
+                        <button class="btn btn-primary" type="submit">Adicionar</button>
+                      </div>
+                    </form>
+
+                    <div class="d-grid gap-2">
+                      {% for item in checklist_by_stage.get(stage.id, []) %}
+                        <div class="checklist-row">
+                          <form method="post" action="{{ url_for('update_workflow_checklist_item_admin', item_id=item.id) }}" class="row g-2 align-items-end">
+                            {% include "_csrf_token.html" %}
+                            <div class="col-12 col-lg-5">
+                              <label class="form-label" for="check-label-{{ item.id }}">Tarefa</label>
+                              <input id="check-label-{{ item.id }}" name="label" class="form-control" value="{{ item.label }}">
+                            </div>
+                            <div class="col-12 col-lg-3">
+                              <label class="form-label" for="check-description-{{ item.id }}">Descricao</label>
+                              <input id="check-description-{{ item.id }}" name="description" class="form-control" value="{{ item.description or '' }}">
+                            </div>
+                            <div class="col-6 col-lg-1">
+                              <label class="form-label" for="check-sort-{{ item.id }}">Ordem</label>
+                              <input id="check-sort-{{ item.id }}" name="sort_order" type="number" class="form-control" value="{{ item.sort_order }}">
+                            </div>
+                            <div class="col-6 col-lg-1">
+                              <div class="form-check">
+                                <input id="check-required-{{ item.id }}" name="required" class="form-check-input" type="checkbox" {% if item.required %}checked{% endif %}>
+                                <label class="form-check-label" for="check-required-{{ item.id }}">Obrig.</label>
+                              </div>
+                              <div class="form-check">
+                                <input id="check-active-{{ item.id }}" name="active" class="form-check-input" type="checkbox" {% if item.active %}checked{% endif %}>
+                                <label class="form-check-label" for="check-active-{{ item.id }}">Ativo</label>
+                              </div>
+                            </div>
+                            <div class="col-12 col-lg-2 d-flex gap-2 justify-content-lg-end">
+                              <button class="btn btn-success btn-sm" type="submit">Salvar</button>
+                            </div>
+                          </form>
+                          <form method="post" action="{{ url_for('delete_workflow_checklist_item_admin', item_id=item.id) }}" class="mt-2">
+                            {% include "_csrf_token.html" %}
+                            <button class="btn btn-outline-danger btn-sm" type="submit" onclick="return confirm('Excluir este item? Se estiver em uso, o sistema vai bloquear.')">
+                              Excluir tarefa
+                            </button>
+                          </form>
+                        </div>
+                      {% else %}
+                        <div class="text-muted small">Nenhuma tarefa nesta etapa.</div>
+                      {% endfor %}
+                    </div>
+                  </div>
+                </article>
+              {% else %}
+                <div class="text-center text-muted py-4">Nenhuma etapa cadastrada neste fluxo.</div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </section>
+      </div>
+    </main>
+  </body>
+</html>

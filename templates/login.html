@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mini CRM - Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}">
+    {% include "_theme_head.html" %}
+  </head>
+  <body class="bg-light">
+    <div class="position-fixed top-0 end-0 p-3">
+      {% include "_theme_toggle.html" %}
+    </div>
+    <main class="container py-5">
+      <div class="row justify-content-center">
+        <div class="col-12 col-md-5 col-lg-4">
+          <h1 class="h3 mb-4">Mini CRM</h1>
+
+          {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+              {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+              {% endfor %}
+            {% endif %}
+          {% endwith %}
+
+          <div class="card card-body shadow-sm">
+            {% if google_auth_available %}
+              <a class="btn btn-primary w-100 mb-3" href="{{ url_for('google_login') }}">
+                Entrar com Google
+              </a>
+            {% else %}
+              <div class="alert alert-warning small">
+                Google Auth ainda não está configurado. Use o login local de desenvolvimento.
+              </div>
+            {% endif %}
+
+            <form method="post">
+              {% include "_csrf_token.html" %}
+              <div class="mb-3">
+                <label for="username" class="form-label">Usuário ou e-mail local</label>
+                <input id="username" name="username" class="form-control" autofocus>
+              </div>
+              <div class="mb-3">
+                <label for="password" class="form-label">Senha local</label>
+                <input id="password" name="password" type="password" class="form-control">
+              </div>
+              <button class="btn btn-outline-secondary w-100" type="submit">Entrar localmente</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

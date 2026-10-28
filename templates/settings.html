@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mini CRM - Configuracoes</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}">
+    {% include "_theme_head.html" %}
+  </head>
+  <body>
+    {% include "_app_sidebar.html" %}
+    <main class="container-fluid admin-page-shell py-4 app-main">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <header class="admin-page-header">
+        <div>
+          <div class="admin-eyebrow">Configuracoes</div>
+          <h1 class="h3 mb-1">Listas do CRM</h1>
+          <div class="text-muted">Ajuste status do contrato e motivos de perda sem alterar codigo.</div>
+        </div>
+        {% if current_user.can_manage_users or current_user.can_manage_teams or current_user.can_manage_roles %}
+          <a class="btn btn-outline-primary" href="{{ url_for('company_admin') }}">Ir para Empresa</a>
+        {% endif %}
+      </header>
+
+      {% if not current_user.can_manage_settings %}
+        <section class="admin-card">
+          <div class="admin-card-body">
+            <h2 class="h5 mb-1">Listas nao liberadas</h2>
+            <div class="text-muted">Seu usuario acessa administracao, mas nao tem permissao para editar listas.</div>
+          </div>
+        </section>
+      {% else %}
+        <section class="admin-card mb-4">
+          <div class="admin-card-body">
+            <div class="admin-card-title">Empresa atual</div>
+            <div class="admin-card-meta">{{ company.name }} / {{ franchise.name }}</div>
+          </div>
+        </section>
+
+        <div class="row g-4">
+          {% for field_name, label in [('status', 'Status do contrato'), ('motivo_perda', 'Motivos de perda')] %}
+            <div class="col-12 col-xl-6">
+              <section class="admin-table-card h-100">
+                <div class="admin-table-toolbar">
+                  <div>
+                    <div class="admin-card-title">{{ label }}</div>
+                    <div class="admin-card-meta">Desative em vez de apagar para preservar historico.</div>
+                  </div>
+                </div>
+                <div class="p-3 border-bottom">
+                  <form method="post" action="{{ url_for('create_field_option') }}" class="row gy-2 gx-2 align-items-end">
+                    {% include "_csrf_token.html" %}
+                    <input type="hidden" name="field_name" value="{{ field_name }}">
+                    <div class="col-12 col-md-6">
+                      <label class="form-label" for="new-{{ field_name }}">Nova opcao</label>
+                      <input id="new-{{ field_name }}" name="value" class="form-control" placeholder="Ex: Em analise">
+                    </div>
+                    <div class="col-6 col-md-2">
+                      <label class="form-label" for="new-{{ field_name }}-sort">Ordem</label>
+                      <input id="new-{{ field_name }}-sort" name="sort_order" type="number" class="form-control" value="0">
+                    </div>
+                    <div class="col-6 col-md-2">
+                      <label class="form-label" for="new-{{ field_name }}-color">Cor</label>
+                      <input id="new-{{ field_name }}-color" name="color_hex" type="color" class="form-control form-control-color color-input" value="{% if field_name == 'status' %}#2563eb{% else %}#64748b{% endif %}">
+                    </div>
+                    <div class="col-auto">
+                      <button class="btn btn-primary" type="submit">Adicionar</button>
+                    </div>
+                  </form>
+                </div>
+                <div class="table-responsive">
+                  <table class="table table-sm align-middle">
+                    <thead>
+                      <tr>
+                        <th>Ativo</th>
+                        <th>Nome</th>
+                        <th>Cor</th>
+                        <th>Ordem</th>
+                        <th>Preview</th>
+                        <th class="text-end">Acoes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for option in field_options[field_name] %}
+                        {% set option_form_id = 'option-form-' ~ option.id %}
+                        <tr class="{% if not option.active %}opacity-75{% endif %}">
+                          <td>
+                            <form id="{{ option_form_id }}" method="post" action="{{ url_for('update_field_option', option_id=option.id) }}">
+                              {% include "_csrf_token.html" %}
+                            </form>
+                            <input form="{{ option_form_id }}" name="active" type="checkbox" class="form-check-input" {% if option.active %}checked{% endif %}>
+                          </td>
+                          <td>
+                            <input form="{{ option_form_id }}" name="value" class="form-control form-control-sm" value="{{ option.value }}">
+                          </td>
+                          <td style="width: 78px;">
+                            <input form="{{ option_form_id }}" name="color_hex" type="color" class="form-control form-control-color color-input" value="{{ option.color_hex or '#64748b' }}">
+                          </td>
+                          <td style="max-width: 110px;">
+                            <input form="{{ option_form_id }}" name="sort_order" type="number" class="form-control form-control-sm" value="{{ option.sort_order }}">
+                          </td>
+                          <td>
+                            <span class="crm-chip color-preview" style="--chip-color: {{ option.color_hex or '#64748b' }};">{{ option.value }}</span>
+                          </td>
+                          <td class="text-end">
+                            <div class="d-inline-flex flex-wrap justify-content-end gap-1">
+                              <button form="{{ option_form_id }}" class="btn btn-sm btn-success" type="submit">Salvar</button>
+                              {% if option.active %}
+                                <form method="post" action="{{ url_for('deactivate_field_option', option_id=option.id) }}">
+                                  {% include "_csrf_token.html" %}
+                                  <button class="btn btn-sm btn-outline-warning" type="submit">Desativar</button>
+                                </form>
+                              {% endif %}
+                              <form method="post" action="{{ url_for('delete_field_option', option_id=option.id) }}">
+                                {% include "_csrf_token.html" %}
+                                <button class="btn btn-sm btn-outline-danger" type="submit" onclick="return confirm('Excluir esta opcao? Se estiver em uso, o sistema vai bloquear.')">Excluir</button>
+                              </form>
+                            </div>
+                          </td>
+                        </tr>
+                      {% else %}
+                        <tr>
+                          <td colspan="6" class="text-center text-muted py-4">Nenhuma opcao cadastrada.</td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </main>
+  </body>
+</html>

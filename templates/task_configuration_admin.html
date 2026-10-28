@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mini CRM - Fluxos e tarefas</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}">
+    {% include "_theme_head.html" %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='task_configuration.css', v='20261006-4') }}">
+    <script defer src="{{ url_for('static', filename='task_configuration.js', v='20261006-4') }}"></script>
+  </head>
+  <body>
+    {% include "_app_sidebar.html" %}
+    <main class="container-fluid app-main task-config py-4" id="task-config"
+          data-create-url="{{ url_for('create_task_draft_admin') }}"
+          data-save-url="{{ url_for('save_task_draft_admin', revision_id=0) }}"
+          data-disable-url="{{ url_for('deactivate_draft_tasks_admin', revision_id=0) }}"
+          data-preview-url="/admin/workflows/task-agenda/preview"
+          data-apply-url="/admin/workflows/task-agenda/apply"
+          data-persist-url="/admin/workflows/task-draft/0/save"
+          data-publish-url="/admin/workflows/task-draft/0/publish"
+          data-csrf="{{ csrf_token() }}">
+      <header class="tc-heading">
+        <div><p class="text-muted small text-uppercase mb-1">Administracao</p>
+          <h1 class="h3 mb-1">Fluxos e tarefas</h1>
+          <p class="text-muted mb-0">Padrao da empresa <span aria-hidden="true">/</span> Matriz</p>
+        </div>
+        <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('workflows_admin', view='stages') }}">Etapas e prazos em uso</a>
+      </header>
+      <div class="tc-version-bar">
+        <div><span class="tc-chip" id="tc-version"></span> <span class="text-muted small" id="tc-version-help"></span></div>
+        <div class="d-flex gap-2 flex-wrap"><button class="btn btn-outline-primary btn-sm" id="tc-persist" type="button" hidden>Salvar rascunho atual</button><button class="btn btn-primary btn-sm" id="tc-create" type="button">Criar rascunho</button></div>
+      </div>
+      <div id="tc-notice" class="tc-notice" role="status" aria-live="polite"></div>
+      <p id="tc-stale" class="alert alert-warning" hidden>A configuracao em uso mudou desde a criacao deste rascunho. Sera necessario conciliar as alteracoes antes de publicar.</p>
+      <p id="tc-inactive-warning" class="alert alert-warning small" hidden>Existem regras automaticas inativas no rascunho. A operacao atual continua normal; a simulacao usa as regras desta versao.</p>
+      <nav class="tc-tabs" aria-label="Configuracao de tarefas">
+        <button class="active" type="button" data-view="tasks" aria-pressed="true">Tarefas</button>
+        <button type="button" data-view="agenda" aria-pressed="false">Agenda de contatos</button>
+        <button type="button" data-view="review" aria-pressed="false">Revisao do rascunho <span id="tc-change-count" class="tc-chip">0</span></button>
+      </nav>
+      <section id="tc-tasks" aria-label="Modelos de tarefas">
+        <div class="tc-toolbar">
+          <div><label for="tc-search">Buscar tarefa</label><input id="tc-search" class="form-control form-control-sm" type="search" placeholder="Nome ou orientacao"></div>
+          <div><label for="tc-flow">Fluxo</label><select id="tc-flow" class="form-select form-select-sm"><option value="">Todos os fluxos</option></select></div>
+          <div><label for="tc-stage">Etapa</label><select id="tc-stage" class="form-select form-select-sm"><option value="">Todas as etapas</option></select></div>
+          <div><label for="tc-kind">Tipo</label><select id="tc-kind" class="form-select form-select-sm"><option value="">Todos os tipos</option><option value="checklist">Tarefa de etapa</option><option value="inss">Sequencia INSS</option><option value="contact">Contato recorrente</option><option value="conditional">Escolha do responsavel</option></select></div>
+          <div><label for="tc-status">Situacao</label><select id="tc-status" class="form-select form-select-sm"><option value="current">Atuais</option><option value="active">Ativas</option><option value="inactive">Inativas</option><option value="archived">Legado / fora de uso</option><option value="all">Todas</option></select></div>
+        </div>
+        <div class="tc-list-heading"><span id="tc-results" class="text-muted small" aria-live="polite"></span><div class="d-flex gap-2 flex-wrap"><button type="button" class="btn btn-outline-secondary btn-sm" id="tc-disable">Inativar no rascunho</button><button type="button" class="btn btn-primary btn-sm" id="tc-new">Nova tarefa</button></div></div>
+        <div class="tc-table-wrap"><table class="table tc-table">
+          <thead><tr><th>Tarefa</th><th>Fluxo / etapa</th><th>Criacao / prazo</th><th>Situacao</th><th>Acoes</th></tr></thead>
+          <tbody id="tc-rows"></tbody>
+        </table></div>
+        <p class="text-muted text-center py-4" id="tc-empty" hidden>Nenhuma tarefa encontrada com estes filtros.</p>
+      </section>
+      <section id="tc-agenda" hidden aria-label="Agenda e simulacao">
+        <form id="tc-preview-form" class="tc-preview-form">
+          <div class="tc-preview-mode"><label for="tc-preview-mode">Visualizacao</label><select id="tc-preview-mode" class="form-select"><option value="simulation">Simular novo cliente</option><option value="replan">Previa de replanejamento</option></select></div>
+          <div data-simulation-field><label for="tc-concession">Data de concessao</label><input type="date" class="form-control" id="tc-concession" required min="1900-01-01" max="2200-12-31"></div>
+          <div data-simulation-field><label for="tc-started">Entrada no fluxo</label><input type="date" class="form-control" id="tc-started" required min="1900-01-01" max="2200-12-31"></div>
+          <div data-replan-field hidden><label for="tc-contract">Contrato em fidelizacao</label><select id="tc-contract" class="form-select" disabled required><option value="">Selecione um contrato</option>{% for contract in agenda_contracts %}<option value="{{ contract.id }}">#{{ contract.id }} - {{ contract.name }}</option>{% endfor %}</select></div>
+          <div data-replan-field hidden><label for="tc-effective">Replanejar a partir de</label><input type="date" class="form-control" id="tc-effective" disabled required></div>
+          <div class="tc-preview-action"><button class="btn btn-primary" id="tc-simulate" type="submit">Simular agenda</button></div>
+        </form>
+        <p class="text-muted small">Concessao + 90 dias. Contatos de segunda a sexta, sem calendario de feriados. Nenhuma tarefa e criada nesta previa.</p>
+        <div id="tc-preview-error" role="alert" class="alert alert-danger" hidden></div>
+        <section id="tc-preview-result" hidden aria-label="Resultado da simulacao">
+          <p id="tc-preview-summary" class="tc-preview-summary" aria-live="polite"></p>
+          <ul id="tc-preview-warnings" class="text-muted small"></ul>
+          <p id="tc-preview-assumptions" class="text-muted small"></p>
+          <div class="tc-table-wrap"><table class="table tc-preview-table"><thead><tr><th>Data</th><th>Tarefa</th><th>Janela / decisao</th><th>Detalhe</th></tr></thead><tbody id="tc-preview-rows"></tbody></table></div>
+          <p class="text-muted py-3" id="tc-preview-empty" hidden>Nenhuma tarefa prevista com estas regras e datas.</p>
+          <button type="button" class="btn btn-primary btn-sm" id="tc-apply" hidden>Aplicar replanejamento neste contrato</button>
+        </section>
+      </section>
+      <section id="tc-review" hidden aria-label="Revisao do rascunho">
+        <p class="text-muted mt-3">Salvar preserva o rascunho. Publicar altera os modelos para novas tarefas; as tarefas existentes e suas agendas sao preservadas.</p>
+        <ul id="tc-publication-errors" class="alert alert-warning" hidden></ul>
+        <button type="button" id="tc-publish" class="btn btn-primary btn-sm" hidden>Publicar configuracao</button>
+        <div id="tc-differences"></div>
+        <p class="tc-publication-note">Agendas existentes so mudam com previa e confirmacao por contrato. Publicacao e replanejamento sao exclusivos do ADMIN da matriz.</p>
+        <div class="d-flex gap-2 flex-wrap mt-3"><a class="btn btn-outline-secondary btn-sm" href="{{ url_for('workflows_admin', view='stages') }}">Apoio: etapas e SLA</a>{% if current_user.can_manage_teams %}<a class="btn btn-outline-secondary btn-sm" href="{{ url_for('company_teams_admin') }}">Reversao: distribuicao por equipe</a>{% endif %}</div>
+      </section>
+      <noscript><p class="alert alert-warning">Ative o JavaScript para consultar e editar os rascunhos deste painel.</p></noscript>
+    </main>
+    <dialog id="tc-editor" aria-labelledby="tc-editor-title" class="tc-dialog">
+      <form id="tc-form">
+        <header class="tc-dialog-heading"><div><p class="text-muted small mb-1">Modelo de tarefa</p><h2 id="tc-editor-title" class="h5 mb-0">Editar tarefa</h2></div><button type="button" class="tc-icon" data-close title="Fechar" aria-label="Fechar">&#215;</button></header>
+        <div class="tc-dialog-body">
+          <div id="tc-form-error" class="alert alert-danger" role="alert" hidden></div>
+          <p id="tc-readonly" class="text-muted small" hidden></p>
+          <div class="tc-form-grid">
+            <div class="tc-full"><label for="tc-label">Nome da tarefa</label><input id="tc-label" name="label" class="form-control" maxlength="160" required></div>
+            <div class="tc-full"><label for="tc-description">Orientacao para o operador</label><textarea id="tc-description" name="description" class="form-control" rows="3" maxlength="2000"></textarea></div>
+            <div class="tc-full"><label for="tc-item-stage">Fluxo / etapa</label><select id="tc-item-stage" name="stage_id" class="form-select" required></select></div>
+            <div id="tc-order-field"><label for="tc-order">Ordem</label><input id="tc-order" name="sort_order" class="form-control" type="number" min="0" max="999" required></div>
+            <div id="tc-dependency-field"><label for="tc-dependency">Tarefa anterior</label><select id="tc-dependency" name="depends_on" class="form-select"><option value="">Nenhuma: entrada na etapa</option></select></div>
+            <div id="tc-frequency-field" class="tc-full" hidden><label for="tc-frequency">Frequencia por semana</label><select id="tc-frequency" class="form-select"><option value="1">1 contato</option><option value="2">2 contatos</option><option value="3">3 contatos</option><option value="4">4 contatos</option><option value="5">5 contatos</option><option value="daily">Todos os dias uteis</option></select></div>
+            <div id="tc-delay-field" class="tc-full" hidden><label for="tc-delay">Prazo apos liberacao (dias uteis)</label><input id="tc-delay" type="number" min="0" max="30" class="form-control"><p class="text-muted small mt-1 mb-0">0: no dia da liberacao. As proximas tarefas so liberam apos concluir a anterior.</p></div>
+            <div class="form-check"><input type="checkbox" id="tc-required" name="required" class="form-check-input"><label for="tc-required" class="form-check-label">Obrigatoria</label></div>
+            <div class="form-check"><input type="checkbox" id="tc-active" name="active" class="form-check-input"><label for="tc-active" class="form-check-label">Ativa</label></div>
+          </div>
+          <dl class="tc-rule-summary"><div><dt>Responsavel</dt><dd id="tc-responsible"></dd></div><div><dt>Prazo</dt><dd id="tc-timing"></dd></div><div><dt>Anotacao</dt><dd>Sempre obrigatoria</dd></div></dl>
+        </div>
+        <footer class="tc-dialog-footer"><span class="text-muted small" id="tc-save-help">Somente rascunho. Sem efeito nos clientes.</span><button class="btn btn-outline-secondary btn-sm" type="button" data-close>Fechar</button><button class="btn btn-primary btn-sm" type="submit" id="tc-save">Salvar rascunho</button></footer>
+      </form>
+    </dialog>
+    <script type="application/json" id="tc-data">{{ panel|tojson }}</script>
+  </body>
+</html>

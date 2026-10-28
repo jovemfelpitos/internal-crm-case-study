@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mini CRM - Novo cliente</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}">
+    <style>
+      body { background: #f6f7f9; }
+      .shell { max-width: 980px; }
+      .panel {
+        background: #fff;
+        border: 1px solid #e7e9ee;
+        border-radius: 8px;
+      }
+      .muted-label {
+        color: #6c757d;
+        font-size: .78rem;
+        text-transform: uppercase;
+        letter-spacing: .02em;
+      }
+    </style>
+    {% include "_theme_head.html" %}
+  </head>
+  <body>
+    {% include "_app_sidebar.html" %}
+    <nav class="navbar navbar-expand-lg bg-white border-bottom d-none">
+      <div class="container-fluid shell">
+        <a class="navbar-brand fw-semibold" href="{{ url_for('dashboard') }}">Mini CRM</a>
+        <div class="d-flex align-items-center gap-3">
+          <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('dashboard') }}">Voltar</a>
+          {% include "_theme_toggle.html" %}
+          <span class="small text-muted">{{ current_user.name }} · {{ current_user.role }}</span>
+        </div>
+      </div>
+    </nav>
+
+    <main class="container-fluid shell py-4 app-main">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <section class="panel p-4">
+        <div class="mb-4">
+          <p class="muted-label mb-1">Cadastro manual</p>
+          <h1 class="h3 mb-0">Novo cliente</h1>
+        </div>
+
+        <form method="post" class="row g-3">
+          {% include "_csrf_token.html" %}
+          <div class="col-12 col-md-7">
+            <label class="form-label" for="nome_cliente">Nome do cliente</label>
+            <input
+              id="nome_cliente"
+              name="nome_cliente"
+              class="form-control"
+              value="{{ request.form.get('nome_cliente', '') }}"
+              required
+              autofocus
+            >
+          </div>
+          <div class="col-12 col-md-5">
+            <label class="form-label" for="cpf">CPF</label>
+            <input
+              id="cpf"
+              name="cpf"
+              class="form-control"
+              value="{{ request.form.get('cpf', '') }}"
+              required
+              placeholder="Somente números ou formatado"
+            >
+          </div>
+
+          {% if current_user.can_view_all %}
+            {% if current_user.can_view_all_franchises and franchises %}
+              <div class="col-12">
+                <label class="form-label" for="franchise_id">Franquia</label>
+                <select
+                  id="franchise_id"
+                  name="franchise_id"
+                  class="form-select"
+                  data-current-value="{{ request.form.get('franchise_id', selected_franchise_id) }}"
+                  required
+                >
+                  {% for franchise in franchises %}
+                    <option value="{{ franchise.id }}" {% if request.form.get('franchise_id', selected_franchise_id|string) == franchise.id|string %}selected{% endif %}>
+                      {{ franchise.name }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+            {% endif %}
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="equipe">Equipe</label>
+              <select
+                id="equipe"
+                name="equipe"
+                class="form-select"
+                data-current-value="{{ request.form.get('equipe', selected_team or '') }}"
+                required
+              >
+                <option value="">Selecione</option>
+                {% for team in teams %}
+                  <option value="{{ team }}" {% if request.form.get('equipe', selected_team or '') == team %}selected{% endif %}>
+                    {{ team }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="consultor">Consultor</label>
+              <select
+                id="consultor"
+                name="consultor"
+                class="form-select"
+                data-current-value="{{ request.form.get('consultor', '') }}"
+                required
+              >
+                <option value="">Selecione uma equipe primeiro</option>
+                {% for consultor in consultores %}
+                  <option value="{{ consultor }}" {% if request.form.get('consultor') == consultor %}selected{% endif %}>
+                    {{ consultor }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+          {% elif current_user.role == 'SUPERVISOR' %}
+            <div class="col-12 col-md-6">
+              <label class="form-label">Equipe</label>
+              <input class="form-control" value="{{ current_user.team }}" disabled>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="consultor">Consultor</label>
+              <select id="consultor" name="consultor" class="form-select" required>
+                <option value="">Selecione</option>
+                {% for consultor in consultores %}
+                  <option value="{{ consultor }}" {% if request.form.get('consultor') == consultor %}selected{% endif %}>
+                    {{ consultor }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+          {% else %}
+            <div class="col-12 col-md-6">
+              <label class="form-label">Equipe</label>
+              <input class="form-control" value="{{ current_user.team or '-' }}" disabled>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label">Consultor</label>
+              <input class="form-control" value="{{ assigned_consultor }}" disabled>
+            </div>
+          {% endif %}
+
+          <div class="col-12 col-md-4">
+            <label class="form-label" for="contato">Contato</label>
+            <input
+              id="contato"
+              name="contato"
+              class="form-control"
+              value="{{ request.form.get('contato', '') }}"
+              {% if not current_user.can_edit_contact %}disabled{% endif %}
+            >
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label" for="data_venda">Data da venda</label>
+            <input
+              id="data_venda"
+              name="data_venda"
+              type="date"
+              class="form-control"
+              value="{{ request.form.get('data_venda', '') }}"
+            >
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label" for="concessao">Concessão</label>
+            <input
+              id="concessao"
+              name="concessao"
+              type="date"
+              class="form-control"
+              value="{{ request.form.get('concessao', '') }}"
+            >
+          </div>
+
+          {% if current_user.can_edit_status %}
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="status">Status</label>
+              <select id="status" name="status" class="form-select">
+                <option value=""></option>
+                {% for option in status_options %}
+                  <option value="{{ option }}" {% if request.form.get('status') == option %}selected{% endif %}>{{ option }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          {% endif %}
+
+          {% if current_user.can_edit_atuacoes %}
+            <div class="col-12">
+              <label class="form-label" for="initial_activity">Atuação inicial</label>
+              <textarea
+                id="initial_activity"
+                name="initial_activity"
+                class="form-control"
+                rows="3"
+                placeholder="Opcional: registre o primeiro contato ou observação"
+              >{{ request.form.get('initial_activity', '') }}</textarea>
+              <div class="text-muted small mt-1">Esse registro entra direto na timeline do cliente.</div>
+            </div>
+          {% endif %}
+
+          <div class="col-12 d-flex justify-content-end gap-2">
+            <a class="btn btn-outline-secondary" href="{{ url_for('dashboard') }}">Cancelar</a>
+            <button class="btn btn-primary" type="submit">Criar cliente</button>
+          </div>
+        </form>
+      </section>
+
+    </main>
+    <script>
+      const consultoresByTeam = {{ consultores_by_team|tojson }};
+      const teamsByFranchise = {{ teams_by_franchise|default({})|tojson }};
+      const consultoresByFranchiseTeam = {{ consultores_by_franchise_team|default({})|tojson }};
+      const franchiseSelect = document.getElementById("franchise_id");
+      const equipeSelect = document.getElementById("equipe");
+      const consultorSelect = document.getElementById("consultor");
+
+      function currentConsultoresByTeam() {
+        if (franchiseSelect) {
+          return consultoresByFranchiseTeam[franchiseSelect.value] || {};
+        }
+        return consultoresByTeam;
+      }
+
+      function syncTeamsByFranchise() {
+        if (!franchiseSelect || !equipeSelect || equipeSelect.tagName !== "SELECT") {
+          return;
+        }
+        const teams = teamsByFranchise[franchiseSelect.value] || [];
+        const preferredTeam = equipeSelect.dataset.currentValue || equipeSelect.value;
+        equipeSelect.innerHTML = "";
+
+        if (!teams.length) {
+          const emptyOption = document.createElement("option");
+          emptyOption.value = "";
+          emptyOption.textContent = "Nenhuma equipe disponível nesta franquia";
+          equipeSelect.appendChild(emptyOption);
+          equipeSelect.disabled = true;
+          syncConsultoresByTeam();
+          return;
+        }
+
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "Selecione";
+        equipeSelect.appendChild(placeholder);
+
+        teams.forEach((team) => {
+          const option = document.createElement("option");
+          option.value = team;
+          option.textContent = team;
+          if (team === preferredTeam) {
+            option.selected = true;
+          }
+          equipeSelect.appendChild(option);
+        });
+
+        equipeSelect.disabled = false;
+        equipeSelect.dataset.currentValue = equipeSelect.value;
+        syncConsultoresByTeam();
+      }
+
+      function syncConsultoresByTeam() {
+        if (!equipeSelect || !consultorSelect || consultorSelect.tagName !== "SELECT") {
+          return;
+        }
+        const options = currentConsultoresByTeam()[equipeSelect.value] || [];
+        const preferredValue = consultorSelect.dataset.currentValue || consultorSelect.value;
+        consultorSelect.innerHTML = "";
+
+        if (!options.length) {
+          const emptyOption = document.createElement("option");
+          emptyOption.value = "";
+          emptyOption.textContent = equipeSelect.value ? "Nenhum consultor disponivel" : "Selecione uma equipe primeiro";
+          consultorSelect.appendChild(emptyOption);
+          consultorSelect.disabled = true;
+          return;
+        }
+
+        options.forEach((value) => {
+          const option = document.createElement("option");
+          option.value = value;
+          option.textContent = value;
+          if (value === preferredValue) {
+            option.selected = true;
+          }
+          consultorSelect.appendChild(option);
+        });
+
+        if (!consultorSelect.value) {
+          consultorSelect.value = options[0];
+        }
+        consultorSelect.disabled = false;
+        consultorSelect.dataset.currentValue = consultorSelect.value;
+      }
+
+      if (equipeSelect && consultorSelect) {
+        syncTeamsByFranchise();
+        syncConsultoresByTeam();
+        if (franchiseSelect) {
+          franchiseSelect.addEventListener("change", () => {
+            equipeSelect.dataset.currentValue = "";
+            consultorSelect.dataset.currentValue = "";
+            syncTeamsByFranchise();
+          });
+        }
+        equipeSelect.addEventListener("change", () => {
+          consultorSelect.dataset.currentValue = "";
+          equipeSelect.dataset.currentValue = equipeSelect.value;
+          syncConsultoresByTeam();
+        });
+        consultorSelect.addEventListener("change", () => {
+          consultorSelect.dataset.currentValue = consultorSelect.value;
+        });
+      }
+    </script>
+  </body>
+</html>

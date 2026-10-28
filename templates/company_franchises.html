@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mini CRM - Franquias</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}">
+    {% include "_theme_head.html" %}
+  </head>
+  <body>
+    {% include "_app_sidebar.html" %}
+    <main class="container-fluid admin-page-shell py-4 app-main">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      {% set active_franchises = franchises|selectattr('active')|list %}
+      {% set inactive_franchises = franchises|rejectattr('active')|list %}
+      {% set total_users = namespace(value=0) %}
+      {% set total_teams = namespace(value=0) %}
+      {% set total_leads = namespace(value=0) %}
+      {% for franchise in franchises %}
+        {% set usage = franchise_usage_counts(franchise) %}
+        {% set total_users.value = total_users.value + usage.users %}
+        {% set total_teams.value = total_teams.value + usage.teams %}
+        {% set total_leads.value = total_leads.value + usage.leads %}
+      {% endfor %}
+
+      <header class="admin-page-header">
+        <div>
+          <div class="admin-eyebrow">Empresa / Franquias</div>
+          <h1 class="h3 mb-1">Franquias</h1>
+          <div class="text-muted">Cadastre unidades, filiais ou parceiros que usam o CRM.</div>
+        </div>
+        <button class="btn btn-primary" type="button" data-dialog-open="franchise-create-dialog">Nova franquia</button>
+      </header>
+
+      {% include "_company_subnav.html" %}
+
+      <div class="admin-card-grid mb-4">
+        <section class="admin-card">
+          <div class="admin-card-body">
+            <div class="admin-card-meta">Franquias ativas</div>
+            <div class="admin-stat-value">{{ active_franchises|length }}</div>
+            <div class="admin-card-meta">{{ inactive_franchises|length }} inativa(s)</div>
+          </div>
+        </section>
+        <section class="admin-card">
+          <div class="admin-card-body">
+            <div class="admin-card-meta">Equipes vinculadas</div>
+            <div class="admin-stat-value">{{ total_teams.value }}</div>
+            <div class="admin-card-meta">Times com unidade definida</div>
+          </div>
+        </section>
+        <section class="admin-card">
+          <div class="admin-card-body">
+            <div class="admin-card-meta">Usuarios vinculados</div>
+            <div class="admin-stat-value">{{ total_users.value }}</div>
+            <div class="admin-card-meta">Acessos com unidade definida</div>
+          </div>
+        </section>
+        <section class="admin-card">
+          <div class="admin-card-body">
+            <div class="admin-card-meta">Clientes vinculados</div>
+            <div class="admin-stat-value">{{ total_leads.value }}</div>
+            <div class="admin-card-meta">Base comercial segmentada</div>
+          </div>
+        </section>
+      </div>
+
+      <section class="admin-table-card">
+        <div class="admin-table-toolbar">
+          <div>
+            <div class="admin-card-title">{{ franchises|length }} franquias</div>
+            <div class="admin-card-meta">Abra uma franquia para conferir uso, equipes e usuarios vinculados.</div>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Franquia</th>
+                <th>Documento</th>
+                <th>Contato</th>
+                <th>Equipes</th>
+                <th>Usuarios</th>
+                <th>Clientes</th>
+                <th>Status</th>
+                <th class="text-end">Acoes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for franchise in franchises %}
+                {% set usage = franchise_usage_counts(franchise) %}
+                <tr class="{% if not franchise.active %}opacity-75{% endif %}">
+                  <td>
+                    <div class="fw-semibold">{{ franchise.name }}</div>
+                    <div class="text-muted small">{{ company.name }}</div>
+                  </td>
+                  <td>{{ franchise.document or '-' }}</td>
+                  <td>
+                    <div>{{ franchise.email or '-' }}</div>
+                    <div class="text-muted small">{{ franchise.phone or '' }}</div>
+                  </td>
+                  <td><span class="badge rounded-pill text-bg-secondary">{{ usage.teams }}</span></td>
+                  <td><span class="badge rounded-pill text-bg-secondary">{{ usage.users }}</span></td>
+                  <td><span class="badge rounded-pill text-bg-secondary">{{ usage.leads }}</span></td>
+                  <td>
+                    {% if franchise.active %}
+                      <span class="badge rounded-pill text-bg-success">Ativa</span>
+                    {% else %}
+                      <span class="badge rounded-pill text-bg-secondary">Inativa</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-end">
+                    <button class="admin-action-button" type="button" data-dialog-open="franchise-dialog-{{ franchise.id }}">Editar</button>
+                  </td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="8" class="text-center text-muted py-4">Nenhuma franquia cadastrada.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <dialog id="franchise-create-dialog" class="crm-dialog" {% if modal_should_open('franchise-create-dialog') %}data-modal-auto-open="1"{% endif %}>
+        <div class="crm-dialog-header">
+          <div>
+            <h2 class="h5 mb-1">Nova franquia</h2>
+            <div class="text-muted small">Use para separar unidades ou operacoes parceiras.</div>
+          </div>
+          <button class="crm-dialog-close" type="button" data-dialog-close aria-label="Fechar">x</button>
+        </div>
+        <form method="post" action="{{ url_for('create_franchise') }}" class="crm-dialog-body">
+          {% include "_csrf_token.html" %}
+          <input type="hidden" name="next" value="{{ request.full_path }}">
+          <div class="row g-3">
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="new-franchise-name">Nome</label>
+              <input id="new-franchise-name" name="name" class="form-control" value="{{ modal_value('franchise-create-dialog', 'name') }}" required>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="new-franchise-document">CPF/CNPJ</label>
+              <input id="new-franchise-document" name="document" class="form-control" value="{{ modal_value('franchise-create-dialog', 'document') }}">
+            </div>
+            <div class="col-12 col-md-7">
+              <label class="form-label" for="new-franchise-email">E-mail</label>
+              <input id="new-franchise-email" name="email" type="email" class="form-control" value="{{ modal_value('franchise-create-dialog', 'email') }}">
+            </div>
+            <div class="col-12 col-md-5">
+              <label class="form-label" for="new-franchise-phone">Telefone</label>
+              <input id="new-franchise-phone" name="phone" class="form-control" value="{{ modal_value('franchise-create-dialog', 'phone') }}">
+            </div>
+          </div>
+          <div class="d-flex justify-content-end gap-2 mt-4">
+            <button class="btn btn-outline-secondary" type="button" data-dialog-close>Cancelar</button>
+            <button class="btn btn-primary" type="submit">Criar franquia</button>
+          </div>
+        </form>
+      </dialog>
+
+      {% for franchise in franchises %}
+        {% set usage = franchise_usage_counts(franchise) %}
+        {% set franchise_teams = franchise_teams_by_franchise.get(franchise.id, []) %}
+        {% set franchise_users = franchise_users_by_franchise.get(franchise.id, []) %}
+        {% set available_teams = available_teams_by_franchise.get(franchise.id, []) %}
+        {% set available_users = available_users_by_franchise.get(franchise.id, []) %}
+        {% set franchise_modal_id = 'franchise-dialog-' ~ franchise.id %}
+        <dialog id="{{ franchise_modal_id }}" class="crm-dialog crm-dialog-wide" {% if modal_should_open(franchise_modal_id) %}data-modal-auto-open="1"{% endif %}>
+          <div class="crm-dialog-header">
+            <div>
+              <h2 class="h5 mb-1">Editar franquia</h2>
+              <div class="text-muted small">{{ franchise.name }} · {{ usage.teams }} equipe(s) · {{ usage.users }} usuario(s) · {{ usage.leads }} cliente(s)</div>
+            </div>
+            <button class="crm-dialog-close" type="button" data-dialog-close aria-label="Fechar">x</button>
+          </div>
+          <div class="crm-dialog-body">
+            <form method="post" action="{{ url_for('update_franchise', franchise_id=franchise.id) }}">
+              {% include "_csrf_token.html" %}
+              <input type="hidden" name="next" value="{{ request.full_path }}">
+              <div class="row g-3">
+                <div class="col-12 col-md-6">
+                  <label class="form-label" for="franchise-name-{{ franchise.id }}">Nome</label>
+                  <input id="franchise-name-{{ franchise.id }}" name="name" class="form-control" value="{{ modal_value(franchise_modal_id, 'name', franchise.name) }}" required>
+                </div>
+                <div class="col-12 col-md-6">
+                  <label class="form-label" for="franchise-document-{{ franchise.id }}">CPF/CNPJ</label>
+                  <input id="franchise-document-{{ franchise.id }}" name="document" class="form-control" value="{{ modal_value(franchise_modal_id, 'document', franchise.document or '') }}">
+                </div>
+                <div class="col-12 col-md-7">
+                  <label class="form-label" for="franchise-email-{{ franchise.id }}">E-mail</label>
+                  <input id="franchise-email-{{ franchise.id }}" name="email" type="email" class="form-control" value="{{ modal_value(franchise_modal_id, 'email', franchise.email or '') }}">
+                </div>
+                <div class="col-12 col-md-5">
+                  <label class="form-label" for="franchise-phone-{{ franchise.id }}">Telefone</label>
+                  <input id="franchise-phone-{{ franchise.id }}" name="phone" class="form-control" value="{{ modal_value(franchise_modal_id, 'phone', franchise.phone or '') }}">
+                </div>
+                <div class="col-12">
+                  <div class="form-check form-switch">
+                    <input id="franchise-active-{{ franchise.id }}" name="active" type="checkbox" class="form-check-input" {% if modal_checked(franchise_modal_id, 'active', franchise.active) %}checked{% endif %}>
+                    <label class="form-check-label" for="franchise-active-{{ franchise.id }}">Franquia ativa</label>
+                  </div>
+                </div>
+              </div>
+              <div class="admin-mini-grid mt-4">
+                <div class="admin-mini-stat">
+                  <span>Equipes</span>
+                  <strong>{{ usage.teams }}</strong>
+                </div>
+                <div class="admin-mini-stat">
+                  <span>Usuarios</span>
+                  <strong>{{ usage.users }}</strong>
+                </div>
+                <div class="admin-mini-stat">
+                  <span>Clientes</span>
+                  <strong>{{ usage.leads }}</strong>
+                </div>
+              </div>
+              <div class="d-flex flex-wrap justify-content-between gap-2 mt-4">
+                <div class="d-flex flex-wrap gap-2">
+                  {% if franchise.active %}
+                    <button class="btn btn-outline-warning" type="submit" formaction="{{ url_for('deactivate_franchise', franchise_id=franchise.id) }}">Desativar</button>
+                  {% endif %}
+                  <button
+                    class="btn btn-outline-danger"
+                    type="submit"
+                    formaction="{{ url_for('delete_franchise', franchise_id=franchise.id) }}"
+                    onclick="return confirm('Excluir esta franquia? Se estiver em uso, o sistema vai bloquear.')"
+                  >Excluir</button>
+                </div>
+                <div class="d-flex gap-2">
+                  <button class="btn btn-outline-secondary" type="button" data-dialog-close>Cancelar</button>
+                  <button class="btn btn-primary" type="submit">Salvar franquia</button>
+                </div>
+              </div>
+            </form>
+
+            <section class="admin-soft-panel mt-4">
+              <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                <div>
+                  <div class="admin-card-title">Equipes desta franquia</div>
+                  <div class="admin-card-meta">Mover uma equipe pode sincronizar usuarios e clientes dessa equipe para a franquia.</div>
+                </div>
+                <span class="badge rounded-pill text-bg-primary">{{ franchise_teams|length }} equipe(s)</span>
+              </div>
+
+              {% if current_user.can_manage_teams %}
+                <form method="post" action="{{ url_for('add_franchise_teams', franchise_id=franchise.id) }}" class="row g-2 align-items-end mb-3">
+                  {% include "_csrf_token.html" %}
+                  <input type="hidden" name="next" value="{{ request.full_path }}">
+                  <div class="col-12 col-lg">
+                    <label class="form-label" for="franchise-add-teams-{{ franchise.id }}">Adicionar ou transferir equipes</label>
+                    <select id="franchise-add-teams-{{ franchise.id }}" name="team_ids" class="form-select" multiple size="4" {% if not available_teams %}disabled{% endif %}>
+                      {% for team in available_teams %}
+                        <option value="{{ team.id }}" {% if modal_selected(franchise_modal_id, 'team_ids', team.id) %}selected{% endif %}>
+                          {{ team.name }}{% if team.franchise %} · {{ team.franchise.name }}{% else %} · sem franquia{% endif %}
+                        </option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div class="col-12 col-lg-auto">
+                    <div class="form-check mb-2">
+                      <input id="sync-members-{{ franchise.id }}" name="sync_members" type="checkbox" class="form-check-input" {% if modal_checked(franchise_modal_id, 'sync_members', True) %}checked{% endif %}>
+                      <label class="form-check-label small" for="sync-members-{{ franchise.id }}">Sincronizar usuarios e clientes</label>
+                    </div>
+                    <button class="btn btn-primary w-100" type="submit" {% if not available_teams %}disabled{% endif %}>Adicionar</button>
+                  </div>
+                </form>
+              {% endif %}
+
+              <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th>Equipe</th>
+                      <th>Usuarios</th>
+                      <th>Clientes</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for team in franchise_teams %}
+                      {% set team_usage = team_usage_counts(team) %}
+                      <tr class="{% if not team.active %}opacity-75{% endif %}">
+                        <td>
+                          <div class="fw-semibold">{{ team.name }}</div>
+                          <div class="text-muted small">{{ team.description or 'Sem descricao' }}</div>
+                        </td>
+                        <td><span class="badge rounded-pill text-bg-secondary">{{ team_usage.users }}</span></td>
+                        <td><span class="badge rounded-pill text-bg-secondary">{{ team_usage.leads }}</span></td>
+                        <td>
+                          {% if team.active %}
+                            <span class="badge rounded-pill text-bg-success">Ativa</span>
+                          {% else %}
+                            <span class="badge rounded-pill text-bg-secondary">Inativa</span>
+                          {% endif %}
+                        </td>
+                      </tr>
+                    {% else %}
+                      <tr>
+                        <td colspan="4" class="text-center text-muted py-4">Nenhuma equipe vinculada.</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="admin-soft-panel mt-4">
+              <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                <div>
+                  <div class="admin-card-title">Usuarios desta franquia</div>
+                  <div class="admin-card-meta">Use para ajustes pontuais. Quando possivel, prefira mover pela equipe.</div>
+                </div>
+                <span class="badge rounded-pill text-bg-primary">{{ franchise_users|length }} usuario(s)</span>
+              </div>
+
+              {% if current_user.can_manage_users %}
+                <form method="post" action="{{ url_for('add_franchise_users', franchise_id=franchise.id) }}" class="row g-2 align-items-end mb-3">
+                  {% include "_csrf_token.html" %}
+                  <input type="hidden" name="next" value="{{ request.full_path }}">
+                  <div class="col-12 col-lg">
+                    <label class="form-label" for="franchise-add-users-{{ franchise.id }}">Adicionar ou transferir usuarios</label>
+                    <select id="franchise-add-users-{{ franchise.id }}" name="user_ids" class="form-select" multiple size="4" {% if not available_users %}disabled{% endif %}>
+                      {% for user in available_users %}
+                        <option value="{{ user.id }}" {% if modal_selected(franchise_modal_id, 'user_ids', user.id) %}selected{% endif %}>
+                          {{ user.name }}{% if user.team %} · {{ user.team }}{% else %} · sem equipe{% endif %}{% if user.franchise %} · {{ user.franchise.name }}{% else %} · sem franquia{% endif %}
+                        </option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div class="col-12 col-lg-auto">
+                    <button class="btn btn-primary w-100" type="submit" {% if not available_users %}disabled{% endif %}>Adicionar</button>
+                  </div>
+                </form>
+              {% endif %}
+
+              <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th>Usuario</th>
+                      <th>Equipe</th>
+                      <th>Cargo</th>
+                      <th>Clientes</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for user in franchise_users %}
+                      {% set linked_name = lead_assignment_name(user) %}
+                      {% set linked_count = lead_counts_by_consultor.get(linked_name, 0) %}
+                      <tr class="{% if not user.active %}opacity-75{% endif %}">
+                        <td>
+                          <div class="d-flex align-items-center gap-2">
+                            <span class="admin-avatar" aria-hidden="true">{{ user.name[:1] }}</span>
+                            <div class="min-w-0">
+                              <div class="fw-semibold text-truncate">{{ user.name }}</div>
+                              <div class="text-muted small text-truncate">{{ user.email or user.username }}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td>{{ user.team or '-' }}</td>
+                        <td>
+                          <div class="fw-semibold">{{ user.role_profile.name if user.role_profile else 'Personalizado' }}</div>
+                          <div class="text-muted small">{{ user.role }}</div>
+                        </td>
+                        <td>
+                          <span class="badge rounded-pill {% if linked_count %}text-bg-success{% else %}text-bg-secondary{% endif %}">{{ linked_count }}</span>
+                        </td>
+                        <td>
+                          {% if user.active %}
+                            <span class="badge rounded-pill text-bg-success">Ativo</span>
+                          {% else %}
+                            <span class="badge rounded-pill text-bg-secondary">Desativado</span>
+                          {% endif %}
+                        </td>
+                      </tr>
+                    {% else %}
+                      <tr>
+                        <td colspan="5" class="text-center text-muted py-4">Nenhum usuario vinculado.</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </dialog>
+      {% endfor %}
+    </main>
+
+    <script>
+      document.querySelectorAll("[data-dialog-open]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const dialog = document.getElementById(button.dataset.dialogOpen);
+          if (dialog) dialog.showModal();
+        });
+      });
+      document.querySelectorAll("[data-dialog-close]").forEach((button) => {
+        button.addEventListener("click", () => button.closest("dialog")?.close());
+      });
+      document.querySelectorAll('dialog[data-modal-auto-open="1"]').forEach((dialog) => {
+        dialog.showModal();
+      });
+    </script>
+  </body>
+</html>

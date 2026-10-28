@@ -1,0 +1,690 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mini CRM - Usuarios</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}">
+    {% include "_theme_head.html" %}
+  </head>
+  <body>
+    {% include "_app_sidebar.html" %}
+    <main class="container-fluid admin-page-shell py-4 app-main">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      {% set pending_requests = access_requests|selectattr('status', 'equalto', 'PENDING')|list %}
+      {% set active_users_count = users|selectattr('active')|list|length %}
+      {% set inactive_users_count = users|rejectattr('active')|list|length %}
+      {% set never_logged_count = users|selectattr('last_login_at', 'none')|list|length %}
+
+      <header class="admin-page-header">
+        <div>
+          <div class="admin-eyebrow">Empresa / Usuarios</div>
+          <h1 class="h3 mb-1">Usuarios e acessos</h1>
+          <div class="text-muted">Gerencie acesso, cargo, equipe, franquia, senha e vinculo com clientes.</div>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+          <button class="btn btn-primary" type="button" data-dialog-open="user-create-dialog">Novo usuario</button>
+        </div>
+      </header>
+
+      {% include "_company_subnav.html" %}
+
+      <div class="admin-card-grid mb-4">
+        <section class="admin-card">
+          <div class="admin-card-body">
+            <div class="admin-card-meta">Usuarios ativos</div>
+            <div class="admin-stat-value">{{ active_users_count }}</div>
+            <div class="admin-card-meta">Dentro do filtro atual</div>
+          </div>
+        </section>
+        <section class="admin-card">
+          <div class="admin-card-body">
+            <div class="admin-card-meta">Desativados</div>
+            <div class="admin-stat-value">{{ inactive_users_count }}</div>
+            <div class="admin-card-meta">Sem acesso ao CRM</div>
+          </div>
+        </section>
+        <section class="admin-card">
+          <div class="admin-card-body">
+            <div class="admin-card-meta">Nunca acessaram</div>
+            <div class="admin-stat-value">{{ never_logged_count }}</div>
+            <div class="admin-card-meta">Sem ultimo login registrado</div>
+          </div>
+        </section>
+        <section class="admin-card">
+          <div class="admin-card-body">
+            <div class="admin-card-meta">Solicitacoes Google</div>
+            <div class="admin-stat-value">{{ pending_requests|length }}</div>
+            <div class="admin-card-meta">Pendentes de aprovacao</div>
+          </div>
+        </section>
+      </div>
+
+      <section class="admin-table-card mb-4">
+        <div class="admin-table-toolbar">
+          <div>
+            <div class="admin-card-title">Solicitacoes Google</div>
+            <div class="admin-card-meta">Aprove somente depois de definir cargo, equipe, franquia e nome usado nos clientes.</div>
+          </div>
+          {% if pending_requests %}
+            <span class="badge rounded-pill text-bg-warning">{{ pending_requests|length }} pendente(s)</span>
+          {% endif %}
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Ultima tentativa</th>
+                <th>Pessoa</th>
+                <th>Status</th>
+                <th>Vinculo</th>
+                <th>Observacao</th>
+                <th class="text-end">Acoes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for access_request in access_requests %}
+                <tr>
+                  <td>
+                    <div class="fw-semibold">{{ access_request.last_attempt_at.strftime('%d/%m/%Y %H:%M') }}</div>
+                    <div class="text-muted small">Pedido em {{ access_request.requested_at.strftime('%d/%m/%Y %H:%M') }}</div>
+                  </td>
+                  <td>
+                    <div class="fw-semibold">{{ access_request.name }}</div>
+                    <div class="text-muted small">{{ access_request.email }}</div>
+                  </td>
+                  <td>
+                    {% if access_request.status == 'PENDING' %}
+                      <span class="badge rounded-pill text-bg-warning">Pendente</span>
+                    {% elif access_request.status == 'APPROVED' %}
+                      <span class="badge rounded-pill text-bg-success">Aprovado</span>
+                    {% elif access_request.status == 'REJECTED' %}
+                      <span class="badge rounded-pill text-bg-danger">Recusado</span>
+                    {% else %}
+                      <span class="badge rounded-pill text-bg-secondary">{{ access_request.status }}</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if access_request.status == 'APPROVED' %}
+                      <div>{{ access_request.franchise.name if access_request.franchise else 'Matriz' }}</div>
+                      <div class="text-muted small">Finalizado</div>
+                    {% else %}
+                      <span class="text-muted">Aguardando analise</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-muted small">{{ access_request.notes or '-' }}</td>
+                  <td class="text-end">
+                    {% if access_request.status != 'APPROVED' %}
+                      <button class="admin-action-button" type="button" data-dialog-open="access-request-dialog-{{ access_request.id }}">Analisar</button>
+                    {% else %}
+                      <span class="text-muted small">Finalizado</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="6" class="text-center text-muted py-4">Nenhuma solicitacao por enquanto.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="admin-table-card">
+        <div class="admin-table-toolbar">
+          <div>
+            <div class="admin-card-title">{{ users|length }} usuarios</div>
+            <div class="admin-card-meta">Clique em editar para alterar dados, senha, cargo e permissoes.</div>
+          </div>
+        </div>
+
+        <form method="get" action="{{ url_for('users_admin') }}" class="admin-filter-strip">
+          <div>
+            <label class="form-label" for="filter-q">Buscar</label>
+            <input id="filter-q" name="q" class="form-control" value="{{ user_filters.q or '' }}" placeholder="Nome, e-mail, login ou consultor">
+          </div>
+          <div>
+            <label class="form-label" for="filter-active">Status</label>
+            <select id="filter-active" name="active" class="form-select">
+              <option value="active" {% if user_filters.active == 'active' %}selected{% endif %}>Ativos</option>
+              <option value="inactive" {% if user_filters.active == 'inactive' %}selected{% endif %}>Desativados</option>
+              <option value="all" {% if user_filters.active == 'all' %}selected{% endif %}>Todos</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label" for="filter-role-profile">Cargo</label>
+            <select id="filter-role-profile" name="role_profile_id" class="form-select">
+              <option value="">Todos</option>
+              {% for profile in role_profiles %}
+                <option value="{{ profile.id }}" {% if user_filters.role_profile_id|int == profile.id %}selected{% endif %}>{{ profile.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="form-label" for="filter-role">Tipo base</label>
+            <select id="filter-role" name="role" class="form-select">
+              <option value="">Todos</option>
+              {% for role in roles %}
+                <option value="{{ role }}" {% if user_filters.role == role %}selected{% endif %}>{{ role }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="form-label" for="filter-franchise">Franquia</label>
+            <select id="filter-franchise" name="franchise_id" class="form-select">
+              <option value="">Todas</option>
+              {% for franchise in franchises %}
+                <option value="{{ franchise.id }}" {% if user_filters.franchise_id|int == franchise.id %}selected{% endif %}>{{ franchise.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="form-label" for="filter-team">Equipe</label>
+            <select id="filter-team" name="team" class="form-select">
+              <option value="">Todas</option>
+              {% for team in teams %}
+                <option value="{{ team }}" {% if user_filters.team == team %}selected{% endif %}>{{ team }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="admin-filter-actions">
+            <button class="btn btn-primary" type="submit">Filtrar</button>
+            <a class="btn btn-outline-secondary" href="{{ url_for('users_admin') }}">Limpar</a>
+          </div>
+        </form>
+
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Usuario</th>
+                <th>Franquia</th>
+                <th>Equipe</th>
+                <th>Cargo</th>
+                <th>Clientes</th>
+                <th>Ultimo acesso</th>
+                <th>Status</th>
+                <th class="text-end">Acoes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for user in users %}
+                {% set linked_name = user.lead_name or user.name %}
+                {% set linked_count = lead_counts_by_consultor.get(linked_name, 0) %}
+                <tr class="{% if not user.active %}opacity-75{% endif %}">
+                  <td>
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="admin-avatar" aria-hidden="true">{{ user.name[:1] }}</span>
+                      <div class="min-w-0">
+                        <div class="fw-semibold text-truncate">{{ user.name }}</div>
+                        <div class="text-muted small text-truncate">{{ user.email or user.username }}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>{{ user.franchise.name if user.franchise else 'Matriz' }}</td>
+                  <td>{{ user.team or '-' }}</td>
+                  <td>
+                    <div class="fw-semibold">{{ user.role_profile.name if user.role_profile else 'Personalizado' }}</div>
+                    <div class="text-muted small">{{ user.role }}</div>
+                  </td>
+                  <td>
+                    <span class="badge rounded-pill {% if linked_count %}text-bg-success{% else %}text-bg-secondary{% endif %}">{{ linked_count }}</span>
+                    <span class="text-muted small ms-1">{{ linked_name }}</span>
+                  </td>
+                  <td>
+                    {% if user.last_login_at %}
+                      <div class="fw-semibold">{{ user.last_login_at.strftime('%d/%m/%Y %H:%M') }}</div>
+                      <div class="d-flex flex-wrap gap-1 mt-1">
+                        <span class="security-chip">{{ user.last_login_method or 'login' }}</span>
+                        {% if user.last_login_ip %}
+                          <span class="text-muted small" title="IP do ultimo acesso">{{ user.last_login_ip }}</span>
+                        {% endif %}
+                      </div>
+                    {% else %}
+                      <span class="badge rounded-pill text-bg-secondary">Nunca acessou</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if user.active %}
+                      <span class="badge rounded-pill text-bg-success">Ativo</span>
+                    {% else %}
+                      <span class="badge rounded-pill text-bg-secondary">Desativado</span>
+                    {% endif %}
+                    {% if user.must_change_password %}
+                      <span class="security-chip text-warning border-warning ms-1">troca senha</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-end">
+                    <button class="admin-action-button" type="button" data-dialog-open="user-dialog-{{ user.id }}">Editar</button>
+                  </td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="8" class="text-center text-muted py-4">Nenhum usuario encontrado com esses filtros.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <dialog id="user-create-dialog" class="crm-dialog crm-dialog-wide" {% if modal_should_open('user-create-dialog') %}data-modal-auto-open="1"{% endif %}>
+        <div class="crm-dialog-header">
+          <div>
+            <h2 class="h5 mb-1">Novo usuario</h2>
+            <div class="text-muted small">Crie login local ou deixe sem senha para liberar somente por Google depois.</div>
+          </div>
+          <button class="crm-dialog-close" type="button" data-dialog-close aria-label="Fechar">x</button>
+        </div>
+        <form method="post" action="{{ url_for('create_user') }}" class="crm-dialog-body">
+          {% include "_csrf_token.html" %}
+          <input type="hidden" name="next" value="{{ request.full_path }}">
+          <div class="row g-3">
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="new-name">Nome no CRM</label>
+              <input id="new-name" name="name" class="form-control" value="{{ modal_value('user-create-dialog', 'name') }}" required>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="new-email">E-mail</label>
+              <input id="new-email" name="email" type="email" class="form-control" value="{{ modal_value('user-create-dialog', 'email') }}" required>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="new-lead-name">Nome nos clientes</label>
+              <input id="new-lead-name" name="lead_name" class="form-control" list="consultores-list" value="{{ modal_value('user-create-dialog', 'lead_name') }}" placeholder="Nome exato da planilha">
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="new-franchise">Franquia</label>
+              <select id="new-franchise" name="franchise_id" class="form-select">
+                {% for franchise in franchises %}
+                  <option value="{{ franchise.id }}" {% if modal_selected('user-create-dialog', 'franchise_id', franchise.id) %}selected{% endif %} {% if not franchise.active %}disabled{% endif %}>{{ franchise.name }}{% if not franchise.active %} (inativa){% endif %}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="new-team">Equipe</label>
+              <select id="new-team" name="team" class="form-select">
+                <option value="">Sem equipe</option>
+                {% for team in teams %}
+                  <option value="{{ team }}" {% if modal_selected('user-create-dialog', 'team', team) %}selected{% endif %}>{{ team }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="new-role-profile">Cargo</label>
+              <select id="new-role-profile" name="role_profile_id" class="form-select" data-role-profile-select data-role-base-target="new-role">
+                <option value="">Personalizado</option>
+                {% for profile in role_profiles %}
+                  <option value="{{ profile.id }}" data-base-role="{{ profile.base_role }}" {% if modal_selected('user-create-dialog', 'role_profile_id', profile.id, profile.name == 'Operador') %}selected{% endif %}>{{ profile.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="new-role">Tipo base</label>
+              <select id="new-role" name="role" class="form-select" data-role-base-select>
+                {% for role in roles %}
+                  <option value="{{ role }}" {% if modal_selected('user-create-dialog', 'role', role, role == 'OPERADOR') %}selected{% endif %}>{{ role }}</option>
+                {% endfor %}
+              </select>
+              <div class="base-role-hint" data-role-base-hint-for="new-role" hidden>Definido pelo cargo.</div>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="new-password">Senha local</label>
+              <input id="new-password" name="password" type="password" class="form-control" placeholder="Opcional">
+            </div>
+            <div class="col-12">
+              <div class="form-check form-switch">
+                <input id="new-force-password-change" name="force_password_change" type="checkbox" class="form-check-input" {% if modal_checked('user-create-dialog', 'force_password_change', True) %}checked{% endif %}>
+                <label class="form-check-label" for="new-force-password-change">Exigir troca de senha no primeiro login local</label>
+              </div>
+            </div>
+          </div>
+          <div class="d-flex justify-content-end gap-2 mt-4">
+            <button class="btn btn-outline-secondary" type="button" data-dialog-close>Cancelar</button>
+            <button class="btn btn-primary" type="submit">Criar usuario</button>
+          </div>
+        </form>
+      </dialog>
+
+      {% for access_request in access_requests %}
+        {% if access_request.status != 'APPROVED' %}
+          {% set access_modal_id = 'access-request-dialog-' ~ access_request.id %}
+          <dialog id="{{ access_modal_id }}" class="crm-dialog" {% if modal_should_open(access_modal_id) %}data-modal-auto-open="1"{% endif %}>
+            <div class="crm-dialog-header">
+              <div>
+                <h2 class="h5 mb-1">Analisar acesso Google</h2>
+                <div class="text-muted small">{{ access_request.email }}</div>
+              </div>
+              <button class="crm-dialog-close" type="button" data-dialog-close aria-label="Fechar">x</button>
+            </div>
+            <form method="post" action="{{ url_for('update_access_request', request_id=access_request.id) }}" class="crm-dialog-body">
+              {% include "_csrf_token.html" %}
+              <input type="hidden" name="next" value="{{ request.full_path }}">
+              <div class="row g-3">
+                <div class="col-12">
+                  <div class="admin-inline-summary">
+                    <span class="admin-avatar" aria-hidden="true">{{ access_request.name[:1] }}</span>
+                    <div>
+                      <div class="fw-semibold">{{ access_request.name }}</div>
+                      <div class="text-muted small">Tentativa em {{ access_request.last_attempt_at.strftime('%d/%m/%Y %H:%M') }}</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-12 col-md-6">
+                  <label class="form-label" for="request-role-profile-{{ access_request.id }}">Cargo</label>
+                  <select
+                    id="request-role-profile-{{ access_request.id }}"
+                    name="role_profile_id"
+                    class="form-select"
+                    data-role-profile-select
+                    data-role-base-target="access-request-role-{{ access_request.id }}"
+                  >
+                    <option value="">Personalizado</option>
+                    {% for profile in role_profiles %}
+                      <option value="{{ profile.id }}" data-base-role="{{ profile.base_role }}" {% if modal_selected(access_modal_id, 'role_profile_id', profile.id, profile.base_role == 'OPERADOR' and profile.name == 'Operador') %}selected{% endif %}>{{ profile.name }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="col-12 col-md-6">
+                  <label class="form-label" for="access-request-role-{{ access_request.id }}">Tipo base</label>
+                  <select id="access-request-role-{{ access_request.id }}" name="role" class="form-select" data-role-base-select>
+                    {% for role in roles %}
+                      <option value="{{ role }}" {% if modal_selected(access_modal_id, 'role', role, role == 'OPERADOR') %}selected{% endif %}>{{ role }}</option>
+                    {% endfor %}
+                  </select>
+                  <div class="base-role-hint" data-role-base-hint-for="access-request-role-{{ access_request.id }}" hidden>Definido pelo cargo.</div>
+                </div>
+                <div class="col-12 col-md-6">
+                  <label class="form-label" for="request-franchise-{{ access_request.id }}">Franquia</label>
+                  <select id="request-franchise-{{ access_request.id }}" name="franchise_id" class="form-select">
+                    {% for franchise in franchises %}
+                      <option value="{{ franchise.id }}" {% if modal_selected(access_modal_id, 'franchise_id', franchise.id, access_request.franchise_id == franchise.id) %}selected{% endif %} {% if not franchise.active %}disabled{% endif %}>{{ franchise.name }}{% if not franchise.active %} (inativa){% endif %}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="col-12 col-md-6">
+                  <label class="form-label" for="request-team-{{ access_request.id }}">Equipe</label>
+                  <select id="request-team-{{ access_request.id }}" name="team" class="form-select">
+                    <option value="">Sem equipe</option>
+                    {% for team in teams %}
+                      <option value="{{ team }}" {% if modal_selected(access_modal_id, 'team', team) %}selected{% endif %}>{{ team }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="col-12">
+                  <label class="form-label" for="request-lead-name-{{ access_request.id }}">Nome nos clientes</label>
+                  <input id="request-lead-name-{{ access_request.id }}" name="lead_name" class="form-control" list="consultores-list" value="{{ modal_value(access_modal_id, 'lead_name') }}" placeholder="Nome exato da planilha">
+                </div>
+                <div class="col-12">
+                  <label class="form-label" for="request-notes-{{ access_request.id }}">Observacao</label>
+                  <textarea id="request-notes-{{ access_request.id }}" name="notes" class="form-control" rows="3">{{ modal_value(access_modal_id, 'notes', access_request.notes or '') }}</textarea>
+                </div>
+              </div>
+              <div class="d-flex justify-content-end gap-2 mt-4">
+                <button class="btn btn-outline-secondary" type="button" data-dialog-close>Cancelar</button>
+                <button class="btn btn-outline-danger" name="decision" value="reject" type="submit" formnovalidate>Recusar</button>
+                <button class="btn btn-primary" name="decision" value="approve" type="submit">Aprovar acesso</button>
+              </div>
+            </form>
+          </dialog>
+        {% endif %}
+      {% endfor %}
+
+      {% for user in users %}
+        {% set form_id = 'user-form-' ~ user.id %}
+        {% set user_modal_id = 'user-dialog-' ~ user.id %}
+        {% set linked_name = user.lead_name or user.name %}
+        {% set linked_count = lead_counts_by_consultor.get(linked_name, 0) %}
+        <dialog id="{{ user_modal_id }}" class="crm-dialog crm-dialog-wide" {% if modal_should_open(user_modal_id) %}data-modal-auto-open="1"{% endif %}>
+          <div class="crm-dialog-header">
+            <div>
+              <h2 class="h5 mb-1">Editar usuario</h2>
+              <div class="text-muted small">{{ user.email or user.username }}</div>
+            </div>
+            <button class="crm-dialog-close" type="button" data-dialog-close aria-label="Fechar">x</button>
+          </div>
+          <form id="{{ form_id }}" method="post" action="{{ url_for('update_user', user_id=user.id) }}" class="crm-dialog-body">
+            {% include "_csrf_token.html" %}
+            <input type="hidden" name="next" value="{{ request.full_path }}">
+            <div class="admin-inline-summary mb-3">
+              <span class="admin-avatar" aria-hidden="true">{{ user.name[:1] }}</span>
+              <div class="min-w-0">
+                <div class="fw-semibold text-truncate">{{ user.name }}</div>
+                <div class="text-muted small">
+                  {{ linked_count }} cliente(s) vinculados a "{{ linked_name }}"
+                </div>
+              </div>
+            </div>
+
+            <div class="row g-3">
+              <div class="col-12 col-md-6">
+                <label class="form-label" for="name-{{ user.id }}">Nome no CRM</label>
+                <input id="name-{{ user.id }}" name="name" class="form-control" value="{{ modal_value(user_modal_id, 'name', user.name) }}" required>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label" for="email-{{ user.id }}">E-mail</label>
+                <input id="email-{{ user.id }}" name="email" type="email" class="form-control" value="{{ modal_value(user_modal_id, 'email', user.email or '') }}">
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label" for="lead-name-{{ user.id }}">Nome nos clientes</label>
+                <input id="lead-name-{{ user.id }}" name="lead_name" class="form-control" list="consultores-list" value="{{ modal_value(user_modal_id, 'lead_name', user.lead_name or '') }}" placeholder="{{ user.name }}">
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label" for="franchise-{{ user.id }}">Franquia</label>
+                <select id="franchise-{{ user.id }}" name="franchise_id" class="form-select" {% if user.id == current_user.id %}disabled{% endif %}>
+                  {% for franchise in franchises %}
+                    <option value="{{ franchise.id }}" {% if modal_selected(user_modal_id, 'franchise_id', franchise.id, user.franchise_id == franchise.id) %}selected{% endif %} {% if not franchise.active %}disabled{% endif %}>{{ franchise.name }}{% if not franchise.active %} (inativa){% endif %}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label" for="team-{{ user.id }}">Equipe</label>
+                <select id="team-{{ user.id }}" name="team" class="form-select" {% if user.id == current_user.id %}disabled{% endif %}>
+                  <option value="">Sem equipe</option>
+                  {% if user.team and user.team not in teams %}
+                    <option value="{{ user.team }}" {% if modal_selected(user_modal_id, 'team', user.team, True) %}selected{% endif %}>{{ user.team }}</option>
+                  {% endif %}
+                  {% for team in teams %}
+                    <option value="{{ team }}" {% if modal_selected(user_modal_id, 'team', team, user.team == team) %}selected{% endif %}>{{ team }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label" for="role-profile-{{ user.id }}">Cargo</label>
+                <select
+                  id="role-profile-{{ user.id }}"
+                  name="role_profile_id"
+                  class="form-select"
+                  data-role-profile-select
+                  data-role-base-target="role-{{ user.id }}"
+                  data-permission-panel-target="{{ form_id }}"
+                  {% if user.id == current_user.id %}disabled data-self-locked="1"{% endif %}
+                >
+                  <option value="">Personalizado</option>
+                  {% for profile in role_profiles %}
+                    <option value="{{ profile.id }}" data-base-role="{{ profile.base_role }}" {% if modal_selected(user_modal_id, 'role_profile_id', profile.id, user.role_profile_id == profile.id) %}selected{% endif %}>{{ profile.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label" for="role-{{ user.id }}">Tipo base</label>
+                <select id="role-{{ user.id }}" name="role" class="form-select" data-role-base-select {% if user.id == current_user.id %}disabled data-self-locked="1"{% endif %}>
+                  {% for role in roles %}
+                    <option value="{{ role }}" {% if modal_selected(user_modal_id, 'role', role, user.role == role) %}selected{% endif %}>{{ role }}</option>
+                  {% endfor %}
+                </select>
+                <div class="base-role-hint" data-role-base-hint-for="role-{{ user.id }}" hidden>Definido pelo cargo.</div>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label" for="password-{{ user.id }}">Nova senha local</label>
+                <input id="password-{{ user.id }}" name="password" type="password" class="form-control" placeholder="Deixe em branco para manter">
+                <div class="d-flex flex-wrap gap-1 mt-2">
+                  {% if user.password_hash %}
+                    <span class="security-chip">senha local ativa</span>
+                  {% else %}
+                    <span class="security-chip">sem senha local</span>
+                  {% endif %}
+                  {% if user.password_changed_at %}
+                    <span class="security-chip">alterada {{ user.password_changed_at.strftime('%d/%m/%Y') }}</span>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label">Status de acesso</label>
+                <div class="admin-soft-panel">
+                  {% if user.id == current_user.id %}
+                    <div class="text-muted small">Seu proprio acesso nao pode ser desativado por esta tela.</div>
+                  {% else %}
+                    <div class="form-check form-switch">
+                      <input id="active-{{ user.id }}" name="active" type="checkbox" class="form-check-input" {% if modal_checked(user_modal_id, 'active', user.active) %}checked{% endif %}>
+                      <label class="form-check-label" for="active-{{ user.id }}">Usuario ativo</label>
+                    </div>
+                    <div class="form-check form-switch mt-2">
+                      <input id="force-password-change-{{ user.id }}" name="force_password_change" type="checkbox" class="form-check-input" {% if modal_checked(user_modal_id, 'force_password_change', user.must_change_password) %}checked{% endif %}>
+                      <label class="form-check-label" for="force-password-change-{{ user.id }}">Exigir troca de senha no proximo login</label>
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <div class="permission-panel mt-4" data-permission-panel-for="{{ form_id }}">
+              <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                <div>
+                  <div class="admin-card-title">Permissoes individuais</div>
+                  <div class="admin-card-meta">Use cargo personalizado quando precisar fugir do padrao.</div>
+                </div>
+                <span class="badge rounded-pill text-bg-primary">{{ user_permission_counts.get(user.id, 0) }} ativas</span>
+              </div>
+              <div class="permission-locked-note mb-2">
+                Este usuario usa um cargo pronto. Para editar permissao individual, altere o cargo para Personalizado.
+              </div>
+              <div class="permission-groups">
+                {% for group in permission_groups %}
+                  <section class="permission-group">
+                    <div class="permission-group-title">{{ group.title }}</div>
+                    <div class="permission-group-description">{{ group.description }}</div>
+                    <div class="permission-grid">
+                      {% for field in group.fields %}
+                        <div class="form-check form-switch">
+                          <input
+                            id="{{ field }}-{{ user.id }}"
+                            name="{{ field }}"
+                            type="checkbox"
+                            class="form-check-input"
+                            {% if modal_checked(user_modal_id, field, user|attr(field)) %}checked{% endif %}
+                            {% if user.id == current_user.id %}disabled data-self-locked="1"{% endif %}
+                          >
+                          <label class="form-check-label" for="{{ field }}-{{ user.id }}">{{ permission_labels.get(field, field) }}</label>
+                        </div>
+                      {% endfor %}
+                    </div>
+                  </section>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="d-flex flex-wrap justify-content-between gap-2 mt-4">
+              <div class="d-flex flex-wrap gap-2">
+                {% if user.id != current_user.id %}
+                  {% if user.active %}
+                    <button
+                      class="btn btn-outline-warning"
+                      type="submit"
+                      formaction="{{ url_for('deactivate_user', user_id=user.id) }}"
+                      formnovalidate
+                    >Desativar</button>
+                  {% else %}
+                    <button
+                      class="btn btn-outline-success"
+                      type="submit"
+                      formaction="{{ url_for('reactivate_user', user_id=user.id) }}"
+                      formnovalidate
+                    >Reativar</button>
+                  {% endif %}
+                  <button
+                    class="btn btn-outline-danger"
+                    type="submit"
+                    formaction="{{ url_for('delete_user', user_id=user.id) }}"
+                    formnovalidate
+                    onclick="return confirm('Excluir este usuario? Se existir historico, o sistema vai bloquear.')"
+                  >Excluir</button>
+                {% endif %}
+              </div>
+              <div class="d-flex gap-2">
+                <button class="btn btn-outline-secondary" type="button" data-dialog-close>Cancelar</button>
+                <button class="btn btn-primary" type="submit">Salvar usuario</button>
+              </div>
+            </div>
+          </form>
+        </dialog>
+      {% endfor %}
+
+      <datalist id="consultores-list">
+        {% for consultor in consultores %}
+          <option value="{{ consultor }}"></option>
+        {% endfor %}
+      </datalist>
+    </main>
+
+    <script>
+      (() => {
+        document.querySelectorAll("[data-dialog-open]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const dialog = document.getElementById(button.dataset.dialogOpen);
+            if (dialog) dialog.showModal();
+          });
+        });
+        document.querySelectorAll("[data-dialog-close]").forEach((button) => {
+          button.addEventListener("click", () => button.closest("dialog")?.close());
+        });
+        document.querySelectorAll('dialog[data-modal-auto-open="1"]').forEach((dialog) => {
+          dialog.showModal();
+        });
+
+        const updateProfileControls = (profileSelect) => {
+          const selectedOption = profileSelect.selectedOptions[0];
+          const baseRole = selectedOption?.dataset.baseRole || "";
+          const hasProfile = Boolean(profileSelect.value);
+          const selfLocked = profileSelect.dataset.selfLocked === "1";
+          const roleSelect = document.getElementById(profileSelect.dataset.roleBaseTarget || "");
+          const hint = roleSelect
+            ? document.querySelector(`[data-role-base-hint-for="${roleSelect.id}"]`)
+            : null;
+          const panelKey = profileSelect.dataset.permissionPanelTarget;
+          const permissionPanel = panelKey
+            ? document.querySelector(`[data-permission-panel-for="${panelKey}"]`)
+            : null;
+
+          if (roleSelect) {
+            if (baseRole) {
+              roleSelect.value = baseRole;
+            }
+            roleSelect.disabled = selfLocked || roleSelect.dataset.selfLocked === "1" || hasProfile;
+          }
+          if (hint) {
+            hint.hidden = !hasProfile;
+          }
+          if (permissionPanel) {
+            permissionPanel.classList.toggle("is-profile-controlled", selfLocked || hasProfile);
+            permissionPanel.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
+              checkbox.disabled = selfLocked || hasProfile || checkbox.dataset.selfLocked === "1";
+            });
+          }
+        };
+
+        document.querySelectorAll("[data-role-profile-select]").forEach((profileSelect) => {
+          updateProfileControls(profileSelect);
+          profileSelect.addEventListener("change", () => updateProfileControls(profileSelect));
+        });
+      })();
+    </script>
+  </body>
+</html>

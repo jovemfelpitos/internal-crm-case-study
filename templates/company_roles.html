@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mini CRM - Cargos</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}">
+    {% include "_theme_head.html" %}
+  </head>
+  <body>
+    {% include "_app_sidebar.html" %}
+    <main class="container-fluid admin-page-shell py-4 app-main">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      {% set active_profiles = role_profiles|selectattr('active')|list %}
+      {% set inactive_profiles = role_profiles|rejectattr('active')|list %}
+      {% set total_users = namespace(value=0) %}
+      {% set admin_sensitive_profiles = namespace(value=0) %}
+      {% for profile in role_profiles %}
+        {% set total_users.value = total_users.value + role_profile_user_counts.get(profile.id, 0) %}
+        {% if profile.can_manage_users or profile.can_manage_roles or profile.can_manage_settings or profile.can_manage_workflows or profile.can_view_all %}
+          {% set admin_sensitive_profiles.value = admin_sensitive_profiles.value + 1 %}
+        {% endif %}
+      {% endfor %}
+
+      <header class="admin-page-header">
+        <div>
+          <div class="admin-eyebrow">Empresa / Cargos</div>
+          <h1 class="h3 mb-1">Cargos e permissoes</h1>
+          <div class="text-muted">Configure pacotes de acesso sem editar usuario por usuario.</div>
+        </div>
+        <button class="btn btn-primary" type="button" data-dialog-open="role-create-dialog">Novo cargo</button>
+      </header>
+
+      {% include "_company_subnav.html" %}
+
+      <div class="admin-card-grid mb-4">
+        <section class="admin-card">
+          <div class="admin-card-body">
+            <div class="admin-card-meta">Cargos ativos</div>
+            <div class="admin-stat-value">{{ active_profiles|length }}</div>
+            <div class="admin-card-meta">{{ inactive_profiles|length }} inativo(s)</div>
+          </div>
+        </section>
+        <section class="admin-card">
+          <div class="admin-card-body">
+            <div class="admin-card-meta">Usuarios com cargo</div>
+            <div class="admin-stat-value">{{ total_users.value }}</div>
+            <div class="admin-card-meta">Vinculos administrativos</div>
+          </div>
+        </section>
+        <section class="admin-card">
+          <div class="admin-card-body">
+            <div class="admin-card-meta">Cargos sensiveis</div>
+            <div class="admin-stat-value">{{ admin_sensitive_profiles.value }}</div>
+            <div class="admin-card-meta">Têm visão ampla ou gestão</div>
+          </div>
+        </section>
+      </div>
+
+      <section class="admin-table-card">
+        <div class="admin-table-toolbar">
+          <div>
+            <div class="admin-card-title">{{ role_profiles|length }} cargos</div>
+            <div class="admin-card-meta">Abra um cargo para revisar permissoes e usuarios vinculados.</div>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Cargo</th>
+                <th>Tipo base</th>
+                <th>Usuarios</th>
+                <th>Permissoes</th>
+                <th>Risco</th>
+                <th>Status</th>
+                <th class="text-end">Acoes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for profile in role_profiles %}
+                <tr class="{% if not profile.active %}opacity-75{% endif %}">
+                  <td>
+                    <div class="fw-semibold">{{ profile.name }}</div>
+                    <div class="text-muted small">{{ profile.description or 'Sem descricao' }}</div>
+                  </td>
+                  <td><span class="badge rounded-pill text-bg-secondary">{{ profile.base_role }}</span></td>
+                  <td>
+                    <span class="badge rounded-pill text-bg-primary">{{ role_profile_user_counts.get(profile.id, 0) }}</span>
+                  </td>
+                  <td>
+                    <span class="badge rounded-pill text-bg-secondary">{{ role_profile_permission_counts.get(profile.id, 0) }} ativas</span>
+                  </td>
+                  <td>
+                    {% if profile.can_manage_users or profile.can_manage_roles or profile.can_manage_settings or profile.can_manage_workflows %}
+                      <span class="badge rounded-pill text-bg-danger">admin</span>
+                    {% elif profile.can_view_all or profile.can_upload or profile.can_bulk_delete_leads %}
+                      <span class="badge rounded-pill text-bg-warning">alto impacto</span>
+                    {% else %}
+                      <span class="badge rounded-pill text-bg-success">operacional</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if profile.active %}
+                      <span class="badge rounded-pill text-bg-success">Ativo</span>
+                    {% else %}
+                      <span class="badge rounded-pill text-bg-secondary">Inativo</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-end">
+                    <button class="admin-action-button" type="button" data-dialog-open="role-dialog-{{ profile.id }}">Editar</button>
+                  </td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="7" class="text-center text-muted py-4">Nenhum cargo cadastrado.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <dialog id="role-create-dialog" class="crm-dialog crm-dialog-wide" {% if modal_should_open('role-create-dialog') %}data-modal-auto-open="1"{% endif %}>
+        <div class="crm-dialog-header">
+          <div>
+            <h2 class="h5 mb-1">Novo cargo</h2>
+            <div class="text-muted small">Defina o tipo base e o pacote de permissoes.</div>
+          </div>
+          <button class="crm-dialog-close" type="button" data-dialog-close aria-label="Fechar">x</button>
+        </div>
+        <form method="post" action="{{ url_for('create_role_profile') }}" class="crm-dialog-body">
+          {% include "_csrf_token.html" %}
+          <input type="hidden" name="next" value="{{ request.full_path }}">
+          <div class="row g-3 mb-3">
+            <div class="col-12 col-md-4">
+              <label class="form-label" for="new-profile-name">Cargo</label>
+              <input id="new-profile-name" name="name" class="form-control" value="{{ modal_value('role-create-dialog', 'name') }}" required>
+            </div>
+            <div class="col-12 col-md-5">
+              <label class="form-label" for="new-profile-description">Descricao</label>
+              <input id="new-profile-description" name="description" class="form-control" value="{{ modal_value('role-create-dialog', 'description') }}">
+            </div>
+            <div class="col-6 col-md-2">
+              <label class="form-label" for="new-profile-base">Tipo base</label>
+              <select id="new-profile-base" name="base_role" class="form-select">
+                {% for role in roles %}
+                  <option value="{{ role }}" {% if modal_selected('role-create-dialog', 'base_role', role, role == 'OPERADOR') %}selected{% endif %}>{{ role }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-6 col-md-1">
+              <label class="form-label" for="new-profile-sort">Ordem</label>
+              <input id="new-profile-sort" name="sort_order" type="number" class="form-control" value="{{ modal_value('role-create-dialog', 'sort_order', 10) }}">
+            </div>
+            <div class="col-12">
+              <div class="form-check form-switch">
+                <input id="new-profile-active" name="active" type="checkbox" class="form-check-input" {% if modal_checked('role-create-dialog', 'active', True) %}checked{% endif %}>
+                <label class="form-check-label" for="new-profile-active">Cargo ativo</label>
+              </div>
+            </div>
+          </div>
+          <div class="permission-groups mb-3">
+            {% for group in permission_groups %}
+              <section class="permission-group">
+                <div class="permission-group-title">{{ group.title }}</div>
+                <div class="permission-group-description">{{ group.description }}</div>
+                <div class="permission-grid">
+                  {% for field in group.fields %}
+                    <div class="form-check form-switch">
+                      <input id="new-profile-{{ field }}" name="{{ field }}" type="checkbox" class="form-check-input" {% if modal_checked('role-create-dialog', field, field in ['can_edit_contact', 'can_edit_atuacoes', 'can_move_workflows']) %}checked{% endif %}>
+                      <label class="form-check-label" for="new-profile-{{ field }}">{{ permission_labels.get(field, field) }}</label>
+                    </div>
+                  {% endfor %}
+                </div>
+              </section>
+            {% endfor %}
+          </div>
+          <div class="d-flex justify-content-end gap-2">
+            <button class="btn btn-outline-secondary" type="button" data-dialog-close>Cancelar</button>
+            <button class="btn btn-primary" type="submit">Criar cargo</button>
+          </div>
+        </form>
+      </dialog>
+
+      {% for profile in role_profiles %}
+        {% set linked_users = role_profile_users_by_profile.get(profile.id, []) %}
+        {% set available_users = available_users_by_profile.get(profile.id, []) %}
+        {% set role_modal_id = 'role-dialog-' ~ profile.id %}
+        <dialog id="{{ role_modal_id }}" class="crm-dialog crm-dialog-wide" {% if modal_should_open(role_modal_id) %}data-modal-auto-open="1"{% endif %}>
+          <div class="crm-dialog-header">
+            <div>
+              <h2 class="h5 mb-1">Editar cargo</h2>
+              <div class="text-muted small">{{ profile.name }} · {{ linked_users|length }} usuario(s) · {{ enabled_permission_count(profile) }} permissao(oes)</div>
+            </div>
+            <button class="crm-dialog-close" type="button" data-dialog-close aria-label="Fechar">x</button>
+          </div>
+          <div class="crm-dialog-body">
+            <form method="post" action="{{ url_for('update_role_profile', profile_id=profile.id) }}">
+              {% include "_csrf_token.html" %}
+              <input type="hidden" name="next" value="{{ request.full_path }}">
+              <div class="row g-3 mb-3">
+                <div class="col-12 col-md-4">
+                  <label class="form-label" for="profile-name-{{ profile.id }}">Cargo</label>
+                  <input id="profile-name-{{ profile.id }}" name="name" class="form-control" value="{{ modal_value(role_modal_id, 'name', profile.name) }}" required>
+                </div>
+                <div class="col-12 col-md-5">
+                  <label class="form-label" for="profile-description-{{ profile.id }}">Descricao</label>
+                  <input id="profile-description-{{ profile.id }}" name="description" class="form-control" value="{{ modal_value(role_modal_id, 'description', profile.description or '') }}">
+                </div>
+                <div class="col-6 col-md-2">
+                  <label class="form-label" for="profile-base-{{ profile.id }}">Tipo base</label>
+                  <select id="profile-base-{{ profile.id }}" name="base_role" class="form-select">
+                    {% for role in roles %}
+                      <option value="{{ role }}" {% if modal_selected(role_modal_id, 'base_role', role, profile.base_role == role) %}selected{% endif %}>{{ role }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="col-6 col-md-1">
+                  <label class="form-label" for="profile-sort-{{ profile.id }}">Ordem</label>
+                  <input id="profile-sort-{{ profile.id }}" name="sort_order" type="number" class="form-control" value="{{ modal_value(role_modal_id, 'sort_order', profile.sort_order) }}">
+                </div>
+                <div class="col-12">
+                  <div class="form-check form-switch">
+                    <input id="profile-active-{{ profile.id }}" name="active" type="checkbox" class="form-check-input" {% if modal_checked(role_modal_id, 'active', profile.active) %}checked{% endif %}>
+                    <label class="form-check-label" for="profile-active-{{ profile.id }}">Cargo ativo</label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="admin-mini-grid mb-3">
+                <div class="admin-mini-stat">
+                  <span>Usuarios</span>
+                  <strong>{{ linked_users|length }}</strong>
+                </div>
+                <div class="admin-mini-stat">
+                  <span>Permissoes</span>
+                  <strong>{{ enabled_permission_count(profile) }}</strong>
+                </div>
+                <div class="admin-mini-stat">
+                  <span>Tipo base</span>
+                  <strong>{{ profile.base_role }}</strong>
+                </div>
+              </div>
+
+              <div class="permission-groups mb-3">
+                {% for group in permission_groups %}
+                  <section class="permission-group">
+                    <div class="permission-group-title">{{ group.title }}</div>
+                    <div class="permission-group-description">{{ group.description }}</div>
+                    <div class="permission-grid">
+                      {% for field in group.fields %}
+                        <div class="form-check form-switch">
+                          <input id="profile-{{ profile.id }}-{{ field }}" name="{{ field }}" type="checkbox" class="form-check-input" {% if modal_checked(role_modal_id, field, profile|attr(field)) %}checked{% endif %}>
+                          <label class="form-check-label" for="profile-{{ profile.id }}-{{ field }}">{{ permission_labels.get(field, field) }}</label>
+                        </div>
+                      {% endfor %}
+                    </div>
+                  </section>
+                {% endfor %}
+              </div>
+
+              <div class="admin-soft-panel mb-3">
+                <div class="form-check">
+                  <input id="apply-existing-{{ profile.id }}" name="apply_existing" type="checkbox" class="form-check-input" {% if modal_checked(role_modal_id, 'apply_existing') %}checked{% endif %}>
+                  <label class="form-check-label fw-semibold" for="apply-existing-{{ profile.id }}">Aplicar alteracoes aos usuarios vinculados</label>
+                </div>
+                <div class="text-muted small mt-1">Use quando quiser que os {{ linked_users|length }} usuario(s) deste cargo recebam imediatamente o pacote novo de permissoes.</div>
+              </div>
+
+              <div class="d-flex flex-wrap justify-content-between gap-2">
+                <div class="d-flex flex-wrap gap-2">
+                  {% if profile.active %}
+                    <button class="btn btn-outline-warning" type="submit" formaction="{{ url_for('deactivate_role_profile', profile_id=profile.id) }}">Desativar</button>
+                  {% endif %}
+                  <button
+                    class="btn btn-outline-danger"
+                    type="submit"
+                    formaction="{{ url_for('delete_role_profile', profile_id=profile.id) }}"
+                    onclick="return confirm('Excluir este cargo? Se houver usuarios vinculados, o sistema vai bloquear.')"
+                  >Excluir</button>
+                </div>
+                <div class="d-flex gap-2">
+                  <button class="btn btn-outline-secondary" type="button" data-dialog-close>Cancelar</button>
+                  <button class="btn btn-primary" type="submit">Salvar cargo</button>
+                </div>
+              </div>
+            </form>
+
+            <section class="admin-soft-panel mt-4">
+              <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                <div>
+                  <div class="admin-card-title">Usuarios neste cargo</div>
+                  <div class="admin-card-meta">Vincular um usuario aplica automaticamente o pacote de permissoes deste cargo.</div>
+                </div>
+                <span class="badge rounded-pill text-bg-primary">{{ linked_users|length }} usuario(s)</span>
+              </div>
+
+              {% if current_user.can_manage_users %}
+                <form method="post" action="{{ url_for('add_role_profile_users', profile_id=profile.id) }}" class="row g-2 align-items-end mb-3">
+                  {% include "_csrf_token.html" %}
+                  <input type="hidden" name="next" value="{{ request.full_path }}">
+                  <div class="col-12 col-lg">
+                    <label class="form-label" for="role-add-users-{{ profile.id }}">Adicionar ou transferir usuarios</label>
+                    <select id="role-add-users-{{ profile.id }}" name="user_ids" class="form-select" multiple size="4" {% if not available_users or not profile.active %}disabled{% endif %}>
+                      {% for user in available_users %}
+                        <option value="{{ user.id }}" {% if modal_selected(role_modal_id, 'user_ids', user.id) %}selected{% endif %}>
+                          {{ user.name }}{% if user.team %} · {{ user.team }}{% else %} · sem equipe{% endif %}{% if user.role_profile %} · {{ user.role_profile.name }}{% else %} · personalizado{% endif %}
+                        </option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div class="col-12 col-lg-auto">
+                    <button class="btn btn-primary w-100" type="submit" {% if not available_users or not profile.active %}disabled{% endif %}>Adicionar</button>
+                  </div>
+                </form>
+              {% endif %}
+
+              <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th>Usuario</th>
+                      <th>Equipe</th>
+                      <th>Franquia</th>
+                      <th>Status</th>
+                      <th class="text-end">Acoes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for user in linked_users %}
+                      <tr class="{% if not user.active %}opacity-75{% endif %}">
+                        <td>
+                          <div class="d-flex align-items-center gap-2">
+                            <span class="admin-avatar" aria-hidden="true">{{ user.name[:1] }}</span>
+                            <div class="min-w-0">
+                              <div class="fw-semibold text-truncate">{{ user.name }}</div>
+                              <div class="text-muted small text-truncate">{{ user.email or user.username }}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td>{{ user.team or '-' }}</td>
+                        <td>{{ user.franchise.name if user.franchise else 'Matriz' }}</td>
+                        <td>
+                          {% if user.active %}
+                            <span class="badge rounded-pill text-bg-success">Ativo</span>
+                          {% else %}
+                            <span class="badge rounded-pill text-bg-secondary">Desativado</span>
+                          {% endif %}
+                        </td>
+                        <td class="text-end">
+                          {% if user.id == current_user.id %}
+                            <span class="text-muted small">Voce</span>
+                          {% elif current_user.can_manage_users %}
+                            <form method="post" action="{{ url_for('remove_role_profile_user', profile_id=profile.id, user_id=user.id) }}">
+                              {% include "_csrf_token.html" %}
+                              <input type="hidden" name="next" value="{{ request.full_path }}">
+                              <button class="admin-action-button" type="submit" onclick="return confirm('Remover {{ user.name }} deste cargo? As permissoes atuais serao mantidas como personalizadas.')">Personalizar</button>
+                            </form>
+                          {% else %}
+                            <span class="text-muted small">Sem acao</span>
+                          {% endif %}
+                        </td>
+                      </tr>
+                    {% else %}
+                      <tr>
+                        <td colspan="5" class="text-center text-muted py-4">Nenhum usuario vinculado a este cargo.</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </dialog>
+      {% endfor %}
+    </main>
+
+    <script>
+      document.querySelectorAll("[data-dialog-open]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const dialog = document.getElementById(button.dataset.dialogOpen);
+          if (dialog) dialog.showModal();
+        });
+      });
+      document.querySelectorAll("[data-dialog-close]").forEach((button) => {
+        button.addEventListener("click", () => button.closest("dialog")?.close());
+      });
+      document.querySelectorAll('dialog[data-modal-auto-open="1"]').forEach((dialog) => {
+        dialog.showModal();
+      });
+    </script>
+  </body>
+</html>

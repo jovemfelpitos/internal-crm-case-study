@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mini CRM - Auditoria</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}">
+    <style>
+      body { background: #f6f7f9; }
+      .shell { max-width: 1440px; }
+      .panel {
+        background: #fff;
+        border: 1px solid #e7e9ee;
+        border-radius: 8px;
+      }
+      .muted-label {
+        color: #6c757d;
+        font-size: .78rem;
+        text-transform: uppercase;
+        letter-spacing: .02em;
+      }
+      .event-value {
+        max-width: 260px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    </style>
+    {% include "_theme_head.html" %}
+  </head>
+  <body>
+    {% include "_app_sidebar.html" %}
+    <nav class="navbar navbar-expand-lg bg-white border-bottom d-none">
+      <div class="container-fluid shell">
+        <a class="navbar-brand fw-semibold" href="{{ url_for('dashboard') }}">Mini CRM</a>
+        <div class="d-flex align-items-center gap-3">
+          <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('dashboard') }}">Voltar</a>
+          {% include "_theme_toggle.html" %}
+          <span class="small text-muted">{{ current_user.name }} · {{ current_user.role }}</span>
+          <form method="post" action="{{ url_for('logout') }}">
+            {% include "_csrf_token.html" %}
+            <button class="btn btn-outline-secondary btn-sm">Sair</button>
+          </form>
+        </div>
+      </div>
+    </nav>
+
+    <main class="container-fluid shell py-4 app-main">
+      <div class="mb-4">
+        <p class="muted-label mb-1">Controle interno</p>
+        <h1 class="h3 mb-0">Auditoria</h1>
+      </div>
+
+      <section class="panel p-3 mb-3">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+          <div>
+            <h2 class="h5 mb-1">Importações</h2>
+            <div class="text-muted small">Últimos arquivos processados, com responsável e contagem.</div>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Quando</th>
+                <th>Usuário</th>
+                <th>Arquivo</th>
+                <th>Status</th>
+                <th>Novos</th>
+                <th>Duplicados</th>
+                <th>Ignorados</th>
+                <th>Mensagem</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for batch in import_batches %}
+                <tr>
+                  <td>{{ batch.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                  <td>{{ batch.user.name if batch.user else 'Sistema' }}</td>
+                  <td>{{ batch.filename }}</td>
+                  <td>
+                    <span class="badge {% if batch.status == 'success' %}text-bg-success{% elif batch.status == 'error' %}text-bg-danger{% else %}text-bg-secondary{% endif %}">
+                      {{ batch.status }}
+                    </span>
+                  </td>
+                  <td>{{ batch.created_count }}</td>
+                  <td>{{ batch.duplicate_count }}</td>
+                  <td>{{ batch.skipped_count }}</td>
+                  <td class="text-muted small event-value">{{ batch.message or '-' }}</td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="8" class="text-center text-muted py-4">Nenhuma importação registrada ainda.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel p-3">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+          <div>
+            <h2 class="h5 mb-1">Eventos recentes</h2>
+            <div class="text-muted small">Criações, edições, importações e exclusões registradas no CRM.</div>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Quando</th>
+                <th>Usuário</th>
+                <th>Ação</th>
+                <th>Cliente</th>
+                <th>CPF</th>
+                <th>Campo</th>
+                <th>De</th>
+                <th>Para</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for event in audit_events %}
+                <tr>
+                  <td>{{ event.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                  <td>{{ event.user.name if event.user else 'Sistema' }}</td>
+                  <td>{{ action_label(event.action) }}</td>
+                  <td>
+                    {% if event.lead and not event.lead.deleted_at %}
+                      <a href="{{ url_for('lead_detail', lead_id=event.lead.id) }}">{{ event.lead_name or event.lead.nome_cliente }}</a>
+                    {% else %}
+                      {{ event.lead_name or '-' }}
+                    {% endif %}
+                  </td>
+                  <td>{{ event.lead_cpf or '-' }}</td>
+                  <td>{{ field_label(event.field_name) }}</td>
+                  <td class="text-muted small event-value">{{ event.old_value or '-' }}</td>
+                  <td class="text-muted small event-value">{{ event.new_value or '-' }}</td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="8" class="text-center text-muted py-4">Nenhum evento registrado ainda.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

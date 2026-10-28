@@ -1,0 +1,15 @@
+<div class="admin-subnav" aria-label="Menu da empresa">
+  <a class="{% if request.endpoint == 'company_admin' %}active{% endif %}" href="{{ url_for('company_admin') }}">Visao geral</a>
+  {% if current_user.can_manage_users %}
+    <a class="{% if request.endpoint == 'users_admin' %}active{% endif %}" href="{{ url_for('users_admin') }}">Usuarios</a>
+  {% endif %}
+  {% if current_user.can_manage_teams %}
+    <a class="{% if request.endpoint == 'company_teams_admin' %}active{% endif %}" href="{{ url_for('company_teams_admin') }}">Equipes</a>
+  {% endif %}
+  {% if current_user.can_manage_teams or current_user.can_manage_users %}
+    <a class="{% if request.endpoint == 'company_franchises_admin' %}active{% endif %}" href="{{ url_for('company_franchises_admin') }}">Franquias</a>
+  {% endif %}
+  {% if current_user.can_manage_roles %}
+    <a class="{% if request.endpoint == 'company_roles_admin' %}active{% endif %}" href="{{ url_for('company_roles_admin') }}">Cargos / Permissoes</a>
+  {% endif %}
+</div>
